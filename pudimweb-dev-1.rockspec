@@ -11,7 +11,7 @@ description = {
 }
 
 dependencies = {
-   "lua >= 5.4"
+   "lua >= 5.4",
    "luaXML",
    "loglua",
    "luasocket"
@@ -20,9 +20,7 @@ dependencies = {
 
 build = {
    type = "builtin",
-   modules = {}
-}
-
-test_dependencies = {
-   queries = {}
+   modules = {
+      server = "server.lua"
+   }
 }
