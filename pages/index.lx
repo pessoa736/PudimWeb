@@ -1,9 +1,0 @@
-
-
-local function Home()
-    return <div>
-        
-    <div/>
-end
-
-return Home

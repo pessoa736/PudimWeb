@@ -17,15 +17,16 @@ package.cpath = table.concat(rel_cpaths, ";") .. ";" .. package.cpath
 
 
 -- imports
-local luaXML = require("luaXML")
 local socket = require("socket")
-local main, div = require("taghtml")
+
 
 
 -- server
-local server = assert(socket.bind("127.0.0.1", 9000))
+local server = assert(socket.bind("127.0.0.1", 9001))
 print("Servidor Lua 5.4 rodando na porta 9000")
 
+local page = require("PudimWeb.loader")
+print("pagina: ", page)
 
 while true do
   local client = server:accept()
@@ -33,12 +34,13 @@ while true do
   local line = client:receive("*l")
 
   -- Aqui você pode fazer lógica de rota simples:
-  local body = '<html><body><a href="google.com">Hello from Lua 5.4!</a></body></html>'
-  local response = "HTTP/1.1 200 OK\r\n" ..
-                   "Content-Type: text/html\r\n" ..
-                   "Content-Length: " .. #body .. "\r\n" ..
-                   "\r\n" ..
-                   body
+  local body =  page
+  local response = 
+  "HTTP/1.1 200 OK\r\n" ..
+   "Content-Type: text/html\r\n" ..
+   "Content-Length: " .. #body .. "\r\n" ..
+   "\r\n" ..
+   body
 
   client:send(response)
   client:close()

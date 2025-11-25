@@ -21,6 +21,8 @@ dependencies = {
 build = {
    type = "builtin",
    modules = {
-      server = "server.lua"
+      ["PudimWeb.server"] = "PudimWeb/server.lua",
+      ["PudimWeb.loader"] = "PudimWeb/loader.lua",
+      ["PudimWeb.taghtml"] = "PudimWeb/taghtml.lua",
    }
 }
