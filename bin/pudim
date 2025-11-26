@@ -1,0 +1,389 @@
+#!/usr/bin/env lua
+---@diagnostic disable
+--[[
+    PudimWeb CLI
+    ============
+    
+    Ferramenta de linha de comando para criar e gerenciar projetos PudimWeb.
+    
+    INSTALAÇÃO:
+    -----------
+    Via LuaRocks (automaticamente instalado com pudimweb):
+        luarocks install pudimweb
+    
+    Manual:
+        chmod +x bin/pudim
+        sudo ln -s $(pwd)/bin/pudim /usr/local/bin/pudim
+    
+    COMANDOS:
+    ---------
+    pudim new <nome>    Cria um novo projeto com estrutura Next.js style
+                        - app/pages/     → Rotas automáticas
+                        - app/api/       → API Routes
+                        - app/components → Componentes
+                        - app/public/    → Arquivos estáticos
+    
+    pudim serve [porta] Inicia o servidor de desenvolvimento
+                        Porta padrão: 3000
+    
+    pudim help          Mostra esta mensagem de ajuda
+    
+    EXEMPLOS:
+    ---------
+    pudim new meu-blog
+    cd meu-blog
+    ./install.sh
+    lua server.lua
+    
+    @script pudim
+    @author pessoa736
+    @license MIT
+--]]
+
+local CLI = {}
+
+local colors = {
+    reset = "\27[0m",
+    bold = "\27[1m",
+    red = "\27[31m",
+    green = "\27[32m",
+    yellow = "\27[33m",
+    cyan = "\27[36m",
+}
+
+local function colorize(text, color)
+    return (colors[color] or "") .. text .. colors.reset
+end
+
+local function print_logo()
+    print(colorize([[
+
+    ╔═══════════════════════════════════════╗
+    ║           🍮 PudimWeb CLI             ║
+    ║     Framework Web para Lua 5.4        ║
+    ╚═══════════════════════════════════════╝
+    ]], "yellow"))
+end
+
+local function print_success(msg) print(colorize("  ✓ ", "green") .. msg) end
+local function print_info(msg) print(colorize("  → ", "cyan") .. msg) end
+local function print_error(msg) print(colorize("  ✗ ", "red") .. msg) end
+
+local function mkdir(path)
+    os.execute('mkdir -p "' .. path .. '"')
+end
+
+local function write_file(path, content)
+    local file = io.open(path, "w")
+    if file then
+        file:write(content)
+        file:close()
+        return true
+    end
+    return false
+end
+
+-- Templates
+local function tpl_server(name)
+    return '--[[\n    ' .. name .. ' - Servidor PudimWeb (Next.js style)\n    Execute com: lua server.lua\n]]\n\n' ..
+        'package.path = table.concat({\n' ..
+        '    "./?.lua",\n' ..
+        '    "./?/init.lua",\n' ..
+        '    "./app/?.lua",\n' ..
+        '    "./app/?/init.lua",\n' ..
+        '    "./lua_modules/share/lua/5.4/?.lua",\n' ..
+        '    "./lua_modules/share/lua/5.4/?/init.lua",\n' ..
+        '}, ";") .. ";" .. package.path\n\n' ..
+        'package.cpath = table.concat({\n' ..
+        '    "./lua_modules/lib/lua/5.4/?.so",\n' ..
+        '}, ";") .. ";" .. package.cpath\n\n' ..
+        'pcall(require, "luarocks.loader")\n' ..
+        'require("DaviLuaXML")\n\n' ..
+        'local pudim = require("PudimWeb")\n\n' ..
+        '-- Expõe globais para arquivos .lx\n' ..
+        'pudim.expose()\n\n' ..
+        '-- Inicia com roteamento automático (estilo Next.js)\n' ..
+        'pudim.start({\n' ..
+        '    port = 3000,\n' ..
+        '    pagesDir = "./app/pages",\n' ..
+        '    publicDir = "./app/public",\n' ..
+        '    apiDir = "./app/api",\n' ..
+        '})\n'
+end
+
+local function tpl_index(name)
+    return '-- app/pages/index.lx\n' ..
+        '-- Rota: /\n\n' ..
+        '-- Aliases para tags HTML (DaviLuaXML não suporta "." em tags)\n' ..
+        'local Html, Head, Body = html.html, html.head, html.body\n' ..
+        'local Meta, Title, Link = html.meta, html.title, html.link\n' ..
+        'local Div, H1, P, Nav, A = html.div, html.h1, html.p, html.nav, html.a\n\n' ..
+        'local function Home()\n' ..
+        '    return html.doctype .. <Html lang="pt-BR">\n' ..
+        '        <Head>\n' ..
+        '            <Meta charset="utf-8" />\n' ..
+        '            <Meta name="viewport" content="width=device-width, initial-scale=1" />\n' ..
+        '            <Title>' .. name .. '</Title>\n' ..
+        '            <Link rel="stylesheet" href="/css/style.css" />\n' ..
+        '        </Head>\n' ..
+        '        <Body>\n' ..
+        '            <Div class="container">\n' ..
+        '                <H1>🍮 ' .. name .. '</H1>\n' ..
+        '                <P>Seu projeto PudimWeb está rodando!</P>\n' ..
+        '                <Nav>\n' ..
+        '                    <A href="/">Home</A>\n' ..
+        '                    <A href="/about">Sobre</A>\n' ..
+        '                </Nav>\n' ..
+        '            </Div>\n' ..
+        '        </Body>\n' ..
+        '    </Html>\n' ..
+        'end\n\n' ..
+        'return Home\n'
+end
+
+local function tpl_about(name)
+    return '-- app/pages/about.lx\n' ..
+        '-- Rota: /about\n\n' ..
+        '-- Aliases para tags HTML\n' ..
+        'local Html, Head, Body = html.html, html.head, html.body\n' ..
+        'local Meta, Title, Link = html.meta, html.title, html.link\n' ..
+        'local Div, H1, P, A = html.div, html.h1, html.p, html.a\n\n' ..
+        'local function About()\n' ..
+        '    return html.doctype .. <Html lang="pt-BR">\n' ..
+        '        <Head>\n' ..
+        '            <Meta charset="utf-8" />\n' ..
+        '            <Title>Sobre - ' .. name .. '</Title>\n' ..
+        '            <Link rel="stylesheet" href="/css/style.css" />\n' ..
+        '        </Head>\n' ..
+        '        <Body>\n' ..
+        '            <Div class="container">\n' ..
+        '                <H1>Sobre</H1>\n' ..
+        '                <P>Página sobre criada automaticamente.</P>\n' ..
+        '                <A href="/">Voltar</A>\n' ..
+        '            </Div>\n' ..
+        '        </Body>\n' ..
+        '    </Html>\n' ..
+        'end\n\n' ..
+        'return About\n'
+end
+
+local function tpl_api_hello()
+    return '-- app/api/hello.lua\n' ..
+        '-- Rota: /api/hello\n\n' ..
+        'return {\n' ..
+        '    GET = function(req, res)\n' ..
+        '        res.json({\n' ..
+        '            message = "Hello from PudimWeb API!",\n' ..
+        '            timestamp = os.date(),\n' ..
+        '        })\n' ..
+        '    end,\n' ..
+        '    \n' ..
+        '    POST = function(req, res)\n' ..
+        '        res.json({\n' ..
+        '            message = "POST recebido!",\n' ..
+        '            body = req.body,\n' ..
+        '        })\n' ..
+        '    end,\n' ..
+        '}\n'
+end
+
+local function tpl_button_component()
+    return '-- app/components/Button.lx\n' ..
+        '-- Componente reutilizável\n\n' ..
+        'local Button_ = html.button  -- Alias para DaviLuaXML\n\n' ..
+        'local Button = component(function(props, children)\n' ..
+        '    local class = props.class or "btn"\n' ..
+        '    return <Button_ class={class}>\n' ..
+        '        {children}\n' ..
+        '    </Button_>\n' ..
+        'end)\n\n' ..
+        'return Button\n'
+end
+
+local function tpl_css(name)
+    return '/* ' .. name .. ' - Estilos */\n\n' ..
+        '* { margin: 0; padding: 0; box-sizing: border-box; }\n\n' ..
+        'body {\n' ..
+        '    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n' ..
+        '    line-height: 1.6;\n' ..
+        '    color: #333;\n' ..
+        '    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n' ..
+        '    min-height: 100vh;\n' ..
+        '    display: flex;\n' ..
+        '    align-items: center;\n' ..
+        '    justify-content: center;\n' ..
+        '}\n\n' ..
+        '.container {\n' ..
+        '    background: white;\n' ..
+        '    padding: 3rem;\n' ..
+        '    border-radius: 1rem;\n' ..
+        '    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);\n' ..
+        '    text-align: center;\n' ..
+        '    max-width: 500px;\n' ..
+        '}\n\n' ..
+        'h1 { color: #764ba2; margin-bottom: 1rem; font-size: 2rem; }\n' ..
+        'p { color: #666; margin-bottom: 1.5rem; }\n'
+end
+
+local function tpl_gitignore()
+    return '*.luac\nlua_modules/\n*.log\n.DS_Store\n.vscode/\n*.swp\n'
+end
+
+local function tpl_readme(name)
+    return '# ' .. name .. '\n\n' ..
+        'Projeto criado com [PudimWeb](https://github.com/pessoa736/PudimWeb) 🍮\n\n' ..
+        '## Estrutura (estilo Next.js)\n\n' ..
+        '```\n' ..
+        name .. '/\n' ..
+        '├── server.lua        # Ponto de entrada\n' ..
+        '├── app/\n' ..
+        '│   ├── pages/        # Rotas automáticas\n' ..
+        '│   │   ├── index.lx  # → /\n' ..
+        '│   │   └── about.lx  # → /about\n' ..
+        '│   ├── api/          # API Routes\n' ..
+        '│   │   └── hello.lua # → /api/hello\n' ..
+        '│   ├── components/   # Componentes\n' ..
+        '│   └── public/       # Arquivos estáticos\n' ..
+        '└── lua_modules/      # Dependências\n' ..
+        '```\n\n' ..
+        '## Instalação\n\n' ..
+        '```bash\n./install.sh\n```\n\n' ..
+        '## Executar\n\n' ..
+        '```bash\nlua server.lua\n```\n\n' ..
+        'Acesse: http://localhost:3000\n'
+end
+
+local function tpl_install()
+    return '#!/bin/bash\n' ..
+        'echo "🍮 Instalando dependências..."\n' ..
+        'luarocks install --tree lua_modules pudimweb\n' ..
+        'luarocks install --tree lua_modules daviluaxml\n' ..
+        'luarocks install --tree lua_modules loglua\n' ..
+        'luarocks install --tree lua_modules luasocket\n' ..
+        'echo "✓ Pronto! Execute: lua server.lua"\n'
+end
+
+function CLI.new(project_name)
+    if not project_name or project_name == "" then
+        print_error("Nome do projeto é obrigatório!")
+        print_info("Uso: pudim new <nome-do-projeto>")
+        return false
+    end
+    
+    if project_name:match("[^%w_-]") then
+        print_error("Nome inválido. Use apenas letras, números, _ e -")
+        return false
+    end
+    
+    print_logo()
+    print_info("Criando projeto: " .. colorize(project_name, "bold"))
+    print_info("Estrutura: Next.js style 🚀")
+    print("")
+    
+    -- Estrutura de diretórios estilo Next.js
+    local dirs = {
+        project_name,
+        project_name .. "/app",
+        project_name .. "/app/pages",
+        project_name .. "/app/api",
+        project_name .. "/app/components",
+        project_name .. "/app/public",
+        project_name .. "/app/public/css",
+        project_name .. "/app/public/js",
+        project_name .. "/app/public/images",
+    }
+    
+    for _, dir in ipairs(dirs) do
+        mkdir(dir)
+        print_success("Criado: " .. dir .. "/")
+    end
+    
+    local files = {
+        ["server.lua"] = tpl_server(project_name),
+        ["app/pages/index.lx"] = tpl_index(project_name),
+        ["app/pages/about.lx"] = tpl_about(project_name),
+        ["app/api/hello.lua"] = tpl_api_hello(),
+        ["app/components/Button.lx"] = tpl_button_component(),
+        ["app/public/css/style.css"] = tpl_css(project_name),
+        [".gitignore"] = tpl_gitignore(),
+        ["README.md"] = tpl_readme(project_name),
+        ["install.sh"] = tpl_install(),
+    }
+    
+    for filename, content in pairs(files) do
+        local filepath = project_name .. "/" .. filename
+        if write_file(filepath, content) then
+            print_success("Criado: " .. filename)
+        else
+            print_error("Erro ao criar: " .. filename)
+        end
+    end
+    
+    os.execute('chmod +x "' .. project_name .. '/install.sh"')
+    
+    print("")
+    print(colorize("  ✨ Projeto criado com sucesso!", "green"))
+    print("")
+    print_info("Estrutura criada:")
+    print("    📁 app/pages/     → Rotas automáticas")
+    print("    📁 app/api/       → API Routes")  
+    print("    📁 app/components → Componentes")
+    print("    📁 app/public/    → Arquivos estáticos")
+    print("")
+    print_info("Próximos passos:")
+    print("")
+    print("    " .. colorize("cd " .. project_name, "cyan"))
+    print("    " .. colorize("./install.sh", "cyan"))
+    print("    " .. colorize("lua server.lua", "cyan"))
+    print("")
+    print_info("Acesse: " .. colorize("http://localhost:3000", "bold"))
+    print("")
+    
+    return true
+end
+
+function CLI.serve(port)
+    port = port or 9001
+    print_logo()
+    print_info("Iniciando servidor na porta " .. port .. "...")
+    os.execute("lua server.lua")
+end
+
+function CLI.help()
+    print_logo()
+    print([[
+  ]] .. colorize("COMANDOS:", "bold") .. [[
+
+    ]] .. colorize("pudim new <nome>", "cyan") .. [[      Cria um novo projeto
+    ]] .. colorize("pudim serve", "cyan") .. [[           Inicia o servidor
+    ]] .. colorize("pudim help", "cyan") .. [[            Mostra esta ajuda
+
+  ]] .. colorize("EXEMPLOS:", "bold") .. [[
+
+    pudim new meu-site
+    pudim new blog
+
+  ]] .. colorize("MAIS INFO:", "bold") .. [[
+
+    https://github.com/pessoa736/PudimWeb
+
+]])
+end
+
+local function main(args)
+    local cmd = args[1]
+    
+    if not cmd or cmd == "help" or cmd == "-h" or cmd == "--help" then
+        CLI.help()
+    elseif cmd == "new" then
+        CLI.new(args[2])
+    elseif cmd == "serve" then
+        CLI.serve(args[2])
+    else
+        print_error("Comando desconhecido: " .. cmd)
+        print_info("Use 'pudim help' para ver os comandos")
+    end
+end
+
+main(arg or {})
+return CLI
