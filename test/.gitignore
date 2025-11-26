@@ -1,6 +1,0 @@
-*.luac
-lua_modules/
-*.log
-.DS_Store
-.vscode/
-*.swp
