@@ -4,20 +4,20 @@ source = {
    url = "git://github.com/pessoa736/PudimWeb.git"
 }
 description = {
-   summary = "Framework web para Lua 5.4 inspirado em React/Next.js",
+   summary = "Web framework for Lua 5.4 inspired by React/Next.js",
    detailed = [[
-      PudimWeb é um framework web para Lua 5.4 com arquitetura
-      inspirada em React/Next.js. Inclui roteamento baseado em
-      arquivos, componentes funcionais, hooks (useState, useEffect,
-      useMemo, useContext), e suporte a arquivos .lx via DaviLuaXML.
+      PudimWeb is a web framework for Lua 5.4 with architecture
+      inspired by React/Next.js. Includes file-based routing,
+      functional components, hooks (useState, useEffect, useMemo,
+      useContext), and support for .lx files via DaviLuaXML.
       
-      Características:
-      - Roteamento automático baseado em arquivos (Next.js style)
-      - Componentes funcionais com props/children
-      - Hooks para gerenciamento de estado
+      Features:
+      - File-based automatic routing (Next.js style)
+      - Functional components with props/children
+      - Hooks for state management
       - API Routes
-      - Arquivos estáticos
-      - CLI para criar projetos (pudim new)
+      - Static file serving
+      - CLI for project scaffolding (pudim new)
    ]],
    homepage = "https://github.com/pessoa736/PudimWeb",
    license = "MIT"
