@@ -256,10 +256,14 @@ end
 local function tpl_install()
     return '#!/bin/bash\n' ..
         'echo "🍮 Instalando dependências..."\n' ..
-        'luarocks install --tree lua_modules pudimweb\n' ..
-        'luarocks install --tree lua_modules daviluaxml\n' ..
-        'luarocks install --tree lua_modules loglua\n' ..
-        'luarocks install --tree lua_modules luasocket\n' ..
+        'echo ""\n' ..
+        '# Instala PudimWeb do GitHub (ainda não está no luarocks.org)\n' ..
+        'if [ ! -d "/tmp/PudimWeb" ]; then\n' ..
+        '    git clone --depth 1 https://github.com/pessoa736/PudimWeb.git /tmp/PudimWeb\n' ..
+        'fi\n' ..
+        'cd /tmp/PudimWeb && luarocks make --tree "$OLDPWD/lua_modules" rockspecs/pudimweb-dev-2.rockspec\n' ..
+        'cd "$OLDPWD"\n' ..
+        'echo ""\n' ..
         'echo "✓ Pronto! Execute: lua server.lua"\n'
 end
 
