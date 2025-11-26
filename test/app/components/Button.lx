@@ -1,0 +1,13 @@
+-- app/components/Button.lx
+-- Componente reutilizável
+
+local Button_ = html.button  -- Alias para DaviLuaXML
+
+local Button = component(function(props, children)
+    local class = props.class or "btn"
+    return <Button_ class={class}>
+        {children}
+    </Button_>
+end)
+
+return Button

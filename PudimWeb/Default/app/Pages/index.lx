@@ -1,8 +1,0 @@
-
-
-
-function Home(s)
-  return <html.img src="/images.jpeg" />
-end
-
-return Home

@@ -1,47 +1,74 @@
+--[[
+    PudimWeb - Exemplo de uso
+    =========================
+    
+    Execute com: lua ./PudimWeb/server.lua
+--]]
 
+-- Configuração de caminhos
+package.path = table.concat({
+    "./?.lua",
+    "./?/init.lua",
+    "./lua_modules/share/lua/5.4/?.lua",
+    "./lua_modules/share/lua/5.4/?/init.lua",
+}, ";") .. ";" .. package.path
 
+package.cpath = table.concat({
+    "./lua_modules/lib/lua/5.4/?.so",
+}, ";") .. ";" .. package.cpath
 
-
--- Ajuste de ambiente para encontrar módulos instalados em lua_modules
 pcall(require, "luarocks.loader")
-local rel_paths = {
-  "./lua_modules/share/lua/5.4/?.lua",
-  "./lua_modules/share/lua/5.4/?/init.lua"
-}
-package.path = table.concat(rel_paths, ";") .. ";" .. package.path
-local rel_cpaths = {
-  "./lua_modules/lib/lua/5.4/?.so"
-}
-package.cpath = table.concat(rel_cpaths, ";") .. ";" .. package.cpath
 
+-- Carrega o DaviLuaXML para suporte a arquivos .lx
+require("DaviLuaXML")
 
+-- Carrega o framework
+local pudim = require("PudimWeb")
+local html = pudim.html
 
--- imports
-local socket = require("socket")
+-- Expõe html como global para uso em arquivos .lx
+_G.html = html
 
+-- Configura arquivos estáticos
+pudim.staticDir("/", "./app/public")
 
+-- Rota principal
+pudim.get("/", function(req, res)
+    local Page = require("app.Pages.index")
+    
+    local page = html.doctype .. html.html({lang = "pt-BR"}, {
+        html.head({}, {
+            html.meta({charset = "utf-8"}),
+            html.title({}, {"PudimWeb"}),
+        }),
+        html.body({}, {
+            Page()
+        }),
+    })
+    
+    return page
+end)
 
--- server
-local server = assert(socket.bind("127.0.0.1", 9001))
-print("Servidor Lua 5.4 rodando na porta 9000")
+-- Rota de exemplo com parâmetro
+pudim.get("/hello/:name", function(req, res)
+    local name = req.params.name or "mundo"
+    
+    return html.doctype .. html.html({}, {
+        html.body({}, {
+            html.h1({}, {"Olá, " .. name .. "!"}),
+            html.a({href = "/"}, {"Voltar"}),
+        }),
+    })
+end)
 
-local page = require("PudimWeb.loader")
-print("pagina: ", page)
+-- Rota de API JSON
+pudim.get("/api/status", function(req, res)
+    res.json({
+        status = "ok",
+        framework = "PudimWeb",
+        lua_version = _VERSION,
+    })
+end)
 
-while true do
-  local client = server:accept()
-  client:settimeout(1)
-  local line = client:receive("*l")
-
-  -- Aqui você pode fazer lógica de rota simples:
-  local body =  page
-  local response = 
-  "HTTP/1.1 200 OK\r\n" ..
-   "Content-Type: text/html\r\n" ..
-   "Content-Length: " .. #body .. "\r\n" ..
-   "\r\n" ..
-   body
-
-  client:send(response)
-  client:close()
-end
+-- Inicia o servidor
+pudim.listen(9001, "127.0.0.1")

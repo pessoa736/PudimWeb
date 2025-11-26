@@ -1,0 +1,26 @@
+-- app/pages/about.lx
+-- Rota: /about
+
+-- Aliases para tags HTML
+local Html, Head, Body = html.html, html.head, html.body
+local Meta, Title, Link = html.meta, html.title, html.link
+local Div, H1, P, A = html.div, html.h1, html.p, html.a
+
+local function About()
+    return html.doctype .. <Html lang="pt-BR">
+        <Head>
+            <Meta charset="utf-8" />
+            <Title>Sobre - test</Title>
+            <Link rel="stylesheet" href="/css/style.css" />
+        </Head>
+        <Body>
+            <Div class="container">
+                <H1>Sobre</H1>
+                <P>Página sobre criada automaticamente.</P>
+                <A href="/">Voltar</A>
+            </Div>
+        </Body>
+    </Html>
+end
+
+return About
