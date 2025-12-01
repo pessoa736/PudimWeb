@@ -183,8 +183,8 @@ function PudimWeb.expose()
     _G.el = reconciler.el
     -- Client (browser bindings) - agora integrado automaticamente
     _G.client = client
-    _G.$ = client.select
-    _G.$$ = client.selectAll
+    _G["$"] = client.select
+    _G["$$"] = client.selectAll
     -- Renderer
     _G.render = renderer.render
     _G.renderPage = renderer.renderPage

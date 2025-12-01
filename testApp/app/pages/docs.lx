@@ -1,0 +1,70 @@
+-- Documentation Page
+-- Route: /docs
+
+local Div, H1, H2, H3, P, A = html.div, html.h1, html.h2, html.h3, html.p, html.a
+local Pre, Code, Ul, Li = html.pre, html.code, html.ul, html.li
+
+-- Code examples as strings
+local componentCode = "local Button = component(function(props, children)\n" ..
+    "    local class = props.class or \"btn\"\n" ..
+    "    return <button class={class}>{children}</button>\n" ..
+    "end)"
+
+local routingCode = "app/pages/\n" ..
+    "├── index.lx      -> /\n" ..
+    "├── about.lx      -> /about\n" ..
+    "└── blog/\n" ..
+    "    ├── index.lx  -> /blog\n" ..
+    "    └── [id].lx   -> /blog/:id"
+
+local clientCode = "local onClick = client.function_(\"handleClick\", function()\n" ..
+    "    client.call(\"alert\", \"Ola!\")\n" ..
+    "end)\n" ..
+    "-- Gera: function handleClick(){alert(\"Ola!\")}"
+
+local vdomCode = "local vdom = require(\"PudimWeb.core.vdom\")\n" ..
+    "local tree = vdom.h(\"div\", {class=\"box\"}, {\n" ..
+    "    vdom.h(\"p\", {}, \"Texto\")\n" ..
+    "})"
+
+return component(function(props)
+    return <Div class="container docs">
+        <H1>📚 Documentacao</H1>
+        
+        <nav class="toc">
+            <H3>Indice</H3>
+            <Ul>
+                <Li><A href="#components">Componentes</A></Li>
+                <Li><A href="#routing">Roteamento</A></Li>
+                <Li><A href="#client">Client Module</A></Li>
+                <Li><A href="#vdom">Virtual DOM</A></Li>
+            </Ul>
+        </nav>
+        
+        <section id="components">
+            <H2>🧩 Componentes</H2>
+            <P>Componentes sao funcoes que recebem props e children:</P>
+            <Pre><Code>{componentCode}</Code></Pre>
+        </section>
+        
+        <section id="routing">
+            <H2>📁 Roteamento</H2>
+            <P>O roteamento e baseado em arquivos (File-based routing):</P>
+            <Pre><Code>{routingCode}</Code></Pre>
+        </section>
+        
+        <section id="client">
+            <H2>🌐 Client Module</H2>
+            <P>O modulo client gera JavaScript a partir de Lua:</P>
+            <Pre><Code>{clientCode}</Code></Pre>
+        </section>
+        
+        <section id="vdom">
+            <H2>⚡ Virtual DOM</H2>
+            <P>O VDom otimiza atualizacoes comparando arvores:</P>
+            <Pre><Code>{vdomCode}</Code></Pre>
+        </section>
+        
+        <A href="/" class="link">← Voltar para Home</A>
+    </Div>
+end)

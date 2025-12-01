@@ -1,0 +1,17 @@
+-- Card Component
+
+local Div, H2 = html.div, html.h2
+
+return component(function(props, children)
+    local class = "card"
+    if props.class then
+        class = class .. " " .. props.class
+    end
+    
+    return <Div class={class}>
+        {props.title and <H2 class="card-title">{props.title}</H2> or ""}
+        <Div class="card-body">
+            {children}
+        </Div>
+    </Div>
+end)

@@ -1,0 +1,26 @@
+-- Reusable Button Component
+
+local ButtonEl = html.button
+
+return component(function(props, children)
+    local class = "btn"
+    if props.variant == "primary" then
+        class = class .. " btn-primary"
+    elseif props.variant == "secondary" then
+        class = class .. " btn-secondary"
+    end
+    
+    if props.size == "large" then
+        class = class .. " btn-lg"
+    elseif props.size == "small" then
+        class = class .. " btn-sm"
+    end
+    
+    return <ButtonEl 
+        class={class} 
+        onclick={props.onclick}
+        disabled={props.disabled}
+    >
+        {children}
+    </ButtonEl>
+end)

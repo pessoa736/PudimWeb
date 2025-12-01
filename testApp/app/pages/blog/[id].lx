@@ -1,0 +1,44 @@
+-- Blog Post Page (Dynamic Route)
+-- Route: /blog/:id
+
+local Div, H1, P, A = html.div, html.h1, html.p, html.a
+
+-- Mock database
+local postsDB = {
+    ["1"] = {
+        title = "Introducao ao PudimWeb",
+        content = "PudimWeb e um framework web moderno para Lua...",
+        date = "2025-01-15"
+    },
+    ["2"] = {
+        title = "Componentes Reutilizaveis",
+        content = "Aprenda a criar componentes que podem ser usados em todo o projeto...",
+        date = "2025-01-10"
+    },
+    ["3"] = {
+        title = "Virtual DOM Explicado",
+        content = "Entenda como o Virtual DOM otimiza a renderizacao...",
+        date = "2025-01-05"
+    }
+}
+
+return component(function(props)
+    local id = props.params and props.params.id or "1"
+    local post = postsDB[id]
+    
+    if not post then
+        return <Div class="container">
+            <H1>404 - Post nao encontrado</H1>
+            <A href="/blog" class="link">← Voltar para Blog</A>
+        </Div>
+    end
+    
+    return <Div class="container">
+        <A href="/blog" class="link">← Voltar para Blog</A>
+        <article>
+            <H1>{post.title}</H1>
+            <P class="date">Publicado em: {post.date}</P>
+            <P class="content">{post.content}</P>
+        </article>
+    </Div>
+end)

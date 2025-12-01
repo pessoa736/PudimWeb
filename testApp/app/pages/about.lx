@@ -1,0 +1,46 @@
+-- About Page
+-- Route: /about
+
+local Div, H1, H2, P, A = html.div, html.h1, html.h2, html.p, html.a
+local Code, Pre = html.code, html.pre
+
+-- Code example as string (avoid XML parsing issues)
+local codeExample = "local Card = component(function(props, children)\n" ..
+    "    return <Div class=\"card\">\n" ..
+    "        <H2>{props.title}</H2>\n" ..
+    "        {children}\n" ..
+    "    </Div>\n" ..
+    "end)\n\n" ..
+    "-- Usando:\n" ..
+    "<Card title=\"Meu Card\">\n" ..
+    "    <P>Conteudo do card</P>\n" ..
+    "</Card>"
+
+return component(function(props)
+    return <Div class="container">
+        <H1>📖 Sobre o PudimWeb</H1>
+        
+        <section>
+            <H2>O que e?</H2>
+            <P>
+                PudimWeb e um framework web para Lua 5.4 que traz conceitos 
+                modernos de desenvolvimento web para o ecossistema Lua.
+            </P>
+        </section>
+        
+        <section>
+            <H2>Stack Tecnologica</H2>
+            <P><strong>Lua 5.4</strong> - Linguagem de programacao</P>
+            <P><strong>DaviLuaXML</strong> - Sintaxe XML em Lua</P>
+            <P><strong>LuaSocket</strong> - Servidor HTTP</P>
+            <P><strong>loglua</strong> - Sistema de logging</P>
+        </section>
+        
+        <section>
+            <H2>Exemplo de Componente</H2>
+            <Pre><Code>{codeExample}</Code></Pre>
+        </section>
+        
+        <A href="/" class="link">← Voltar para Home</A>
+    </Div>
+end)

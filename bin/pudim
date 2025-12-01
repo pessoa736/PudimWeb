@@ -996,8 +996,8 @@ local function createProject(name)
     print()
     print("Next steps:")
     print("  " .. color("cyan", "cd " .. name))
-    print("  " .. color("cyan", "luarocks make --local") .. color("gray", "  # install dependencies"))
-    print("  " .. color("cyan", "pudim serve") .. color("gray", "             # start server"))
+    print("  " .. color("cyan", "luarocks install pudimweb --local") .. color("gray", "  # install PudimWeb"))
+    print("  " .. color("cyan", "pudim serve") .. color("gray", "                        # start server"))
     print()
 end
 
