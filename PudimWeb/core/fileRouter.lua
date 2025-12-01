@@ -183,7 +183,8 @@ local function createApiHandler(filePath)
             if _G.log then
                 _G.log.error(_G.log.section("PudimWeb.fileRouter"), "Erro ao carregar API:", apiPath, apiModule)
             end
-            return res.status(500).json({ error = "Erro ao carregar API", details = tostring(apiModule) })
+            res:status(500):json({ error = "Erro ao carregar API", details = tostring(apiModule) })
+            return
         end
         
         -- Busca método correspondente (GET, POST, etc.)
@@ -196,8 +197,10 @@ local function createApiHandler(filePath)
                 if _G.log then
                     _G.log.error(_G.log.section("PudimWeb.fileRouter"), "Erro ao executar API:", apiPath, method, result)
                 end
-                return res.status(500).json({ error = "Erro ao executar API", details = tostring(result) })
+                res:status(500):json({ error = "Erro ao executar API", details = tostring(result) })
+                return
             end
+            -- Handler pode retornar algo ou não (se usou res:json() diretamente)
             return result
         elseif apiModule.default then
             local ok2, result = pcall(apiModule.default, req, res)
@@ -205,14 +208,16 @@ local function createApiHandler(filePath)
                 if _G.log then
                     _G.log.error(_G.log.section("PudimWeb.fileRouter"), "Erro ao executar API (default):", apiPath, result)
                 end
-                return res.status(500).json({ error = "Erro ao executar API", details = tostring(result) })
+                res:status(500):json({ error = "Erro ao executar API", details = tostring(result) })
+                return
             end
             return result
         else
             if _G.log then
                 _G.log.debug(_G.log.section("PudimWeb.fileRouter"), "Método não permitido:", apiPath, method)
             end
-            return res.status(405).json({ error = "Método não permitido" })
+            res:status(405):json({ error = "Método não permitido" })
+            return
         end
     end
 end

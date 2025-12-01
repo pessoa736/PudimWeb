@@ -1,8 +1,8 @@
 package = "PudimWeb"
-version = "1.0-2"
+version = "1.0-3"
 source = {
    url = "git://github.com/pessoa736/PudimWeb.git",
-   tag = "v1.0-2"
+   tag = "v1.0-3"
 }
 description = {
    summary = "Web framework for Lua 5.4 inspired by React/Next.js",

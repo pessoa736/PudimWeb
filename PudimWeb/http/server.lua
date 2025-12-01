@@ -123,29 +123,32 @@ function Server.handleRequest(client, router, static_dir, static_prefix)
             if _G.log then
                 _G.log.error(_G.log.section("PudimWeb.server"), "Erro no handler:", req.method, req.path, result)
             end
-            res.status(500).html(renderer.renderError(result))
+            res:status(500):html(renderer.renderError(result))
+        elseif res._sent then
+            -- Handler já enviou resposta (APIs usando res:json() diretamente)
+            return
         elseif type(result) == "string" then
-            res.html(result)
+            res:html(result)
         elseif type(result) == "function" then
             -- Handler retornou um componente - renderiza via renderer
             local html = renderer.render(result, { request = req, params = params }, req.path)
-            res.html(html)
+            res:html(html)
         elseif type(result) == "table" then
             -- Pode ser VNode ou dados JSON
             if result.type then
                 -- É um VNode - renderiza
                 local html = renderer.render(result, { request = req }, req.path)
-                res.html(html)
+                res:html(html)
             else
                 -- É dados - envia como JSON
-                res.json(result)
+                res:json(result)
             end
         end
     else
         if _G.log then
             _G.log.debug(_G.log.section("PudimWeb.server"), "Rota não encontrada:", req.method, req.path)
         end
-        res.status(404).html("<h1>404 - Página não encontrada</h1>")
+        res:status(404):html("<h1>404 - Página não encontrada</h1>")
     end
 end
 

@@ -153,8 +153,8 @@ function Static.serve(req, res, staticDir, prefix)
     local mimeType = getMimeType(path)
     
     -- Envia a resposta
-    res.type(mimeType)
-    res.send(content)
+    res:type(mimeType)
+    res:send(content)
     
     return true
 end
