@@ -129,6 +129,7 @@ templates["app/pages/index.lx"] = [[
 
 local Div, H1, P, A = html.div, html.h1, html.p, html.a
 local Button, Ul, Li = html.button, html.ul, html.li
+local Span = html.span
 
 -- Interactive counter component using client module
 local Counter = component(function(props)
@@ -144,23 +145,25 @@ local Counter = component(function(props)
     end)
     
     return <Div class="counter">
-        <P>Contagem: <span id="count">{tostring(startValue)}</span></P>
+        <P>Contagem: <Span id="count">{tostring(startValue)}</Span></P>
         <Button id="counterBtn" onclick="counterBtn()">Incrementar</Button>
         {onClick}
     </Div>
 end)
 
 -- Page component
+local Header, Section = html.header, html.section
+
 return component(function(props)
     return <Div class="container">
-        <header class="hero">
+        <Header class="hero">
             <H1>🍮 Bem-vindo ao PudimWeb!</H1>
             <P class="subtitle">
                 Um framework web moderno para Lua, inspirado em React e Next.js
             </P>
-        </header>
+        </Header>
         
-        <section class="features">
+        <Section class="features">
             <H1>✨ Features</H1>
             <Ul>
                 <Li>📁 File-based routing (como Next.js)</Li>
@@ -170,21 +173,21 @@ return component(function(props)
                 <Li>🔄 Reconciler para atualizações eficientes</Li>
                 <Li>🌐 Client module para interatividade</Li>
             </Ul>
-        </section>
+        </Section>
         
-        <section class="demo">
+        <Section class="demo">
             <H1>🎯 Exemplo Interativo</H1>
             <Counter start={0}/>
-        </section>
+        </Section>
         
-        <section class="links">
+        <Section class="links">
             <H1>📚 Navegação</H1>
             <Div class="nav-links">
                 <A href="/about" class="link">Sobre</A>
                 <A href="/docs" class="link">Documentação</A>
                 <A href="/api/hello" class="link">API Demo</A>
             </Div>
-        </section>
+        </Section>
     </Div>
 end)
 ]]
@@ -196,6 +199,7 @@ templates["app/pages/about.lx"] = [[
 
 local Div, H1, H2, P, A = html.div, html.h1, html.h2, html.p, html.a
 local Code, Pre = html.code, html.pre
+local Section, Strong = html.section, html.strong
 
 -- Code example as string (avoid XML parsing issues)
 local codeExample = "local Card = component(function(props, children)\n" ..
@@ -213,26 +217,26 @@ return component(function(props)
     return <Div class="container">
         <H1>📖 Sobre o PudimWeb</H1>
         
-        <section>
+        <Section>
             <H2>O que e?</H2>
             <P>
                 PudimWeb e um framework web para Lua 5.4 que traz conceitos 
                 modernos de desenvolvimento web para o ecossistema Lua.
             </P>
-        </section>
+        </Section>
         
-        <section>
+        <Section>
             <H2>Stack Tecnologica</H2>
-            <P><strong>Lua 5.4</strong> - Linguagem de programacao</P>
-            <P><strong>DaviLuaXML</strong> - Sintaxe XML em Lua</P>
-            <P><strong>LuaSocket</strong> - Servidor HTTP</P>
-            <P><strong>loglua</strong> - Sistema de logging</P>
-        </section>
+            <P><Strong>Lua 5.4</Strong> - Linguagem de programacao</P>
+            <P><Strong>DaviLuaXML</Strong> - Sintaxe XML em Lua</P>
+            <P><Strong>LuaSocket</Strong> - Servidor HTTP</P>
+            <P><Strong>loglua</Strong> - Sistema de logging</P>
+        </Section>
         
-        <section>
+        <Section>
             <H2>Exemplo de Componente</H2>
             <Pre><Code>{codeExample}</Code></Pre>
-        </section>
+        </Section>
         
         <A href="/" class="link">← Voltar para Home</A>
     </Div>
@@ -246,6 +250,7 @@ templates["app/pages/docs.lx"] = [[
 
 local Div, H1, H2, H3, P, A = html.div, html.h1, html.h2, html.h3, html.p, html.a
 local Pre, Code, Ul, Li = html.pre, html.code, html.ul, html.li
+local Nav, Section = html.nav, html.section
 
 -- Code examples as strings
 local componentCode = "local Button = component(function(props, children)\n" ..
@@ -274,7 +279,7 @@ return component(function(props)
     return <Div class="container docs">
         <H1>📚 Documentacao</H1>
         
-        <nav class="toc">
+        <Nav class="toc">
             <H3>Indice</H3>
             <Ul>
                 <Li><A href="#components">Componentes</A></Li>
@@ -282,31 +287,31 @@ return component(function(props)
                 <Li><A href="#client">Client Module</A></Li>
                 <Li><A href="#vdom">Virtual DOM</A></Li>
             </Ul>
-        </nav>
+        </Nav>
         
-        <section id="components">
+        <Section id="components">
             <H2>🧩 Componentes</H2>
             <P>Componentes sao funcoes que recebem props e children:</P>
             <Pre><Code>{componentCode}</Code></Pre>
-        </section>
+        </Section>
         
-        <section id="routing">
+        <Section id="routing">
             <H2>📁 Roteamento</H2>
             <P>O roteamento e baseado em arquivos (File-based routing):</P>
             <Pre><Code>{routingCode}</Code></Pre>
-        </section>
+        </Section>
         
-        <section id="client">
+        <Section id="client">
             <H2>🌐 Client Module</H2>
             <P>O modulo client gera JavaScript a partir de Lua:</P>
             <Pre><Code>{clientCode}</Code></Pre>
-        </section>
+        </Section>
         
-        <section id="vdom">
+        <Section id="vdom">
             <H2>⚡ Virtual DOM</H2>
             <P>O VDom otimiza atualizacoes comparando arvores:</P>
             <Pre><Code>{vdomCode}</Code></Pre>
-        </section>
+        </Section>
         
         <A href="/" class="link">← Voltar para Home</A>
     </Div>
@@ -361,6 +366,7 @@ templates["app/pages/blog/[id].lx"] = [[
 -- Route: /blog/:id
 
 local Div, H1, P, A = html.div, html.h1, html.p, html.a
+local Article = html.article
 
 -- Mock database
 local postsDB = {
@@ -394,11 +400,11 @@ return component(function(props)
     
     return <Div class="container">
         <A href="/blog" class="link">← Voltar para Blog</A>
-        <article>
+        <Article>
             <H1>{post.title}</H1>
             <P class="date">Publicado em: {post.date}</P>
             <P class="content">{post.content}</P>
-        </article>
+        </Article>
     </Div>
 end)
 ]]
