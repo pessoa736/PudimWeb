@@ -48,6 +48,11 @@
     @license MIT
 --]]
 
+if not _G.log then
+    local ok, loglua = pcall(require, "loglua")
+    if ok then _G.log = loglua end
+end
+
 local Hooks = {}
 
 -- Armazena estado global para a requisição atual
@@ -193,8 +198,11 @@ end
 
 --- Executa todos os efeitos registrados
 function Hooks.runEffects()
-    for _, e in ipairs(effects) do
-        e.effect()
+    for i, e in ipairs(effects) do
+        local ok, err = pcall(e.effect)
+        if not ok and _G.log then
+            _G.log.error(_G.log.section("PudimWeb.hooks"), "Erro ao executar efeito #" .. i .. ":", err)
+        end
     end
     effects = {}
 end

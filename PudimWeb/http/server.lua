@@ -35,10 +35,16 @@
     @license MIT
 --]]
 
+if not _G.log then
+    local ok, loglua = pcall(require, "loglua")
+    if ok then _G.log = loglua end
+end
+
 local socket = require("socket")
 local request = require("PudimWeb.http.request")
 local response = require("PudimWeb.http.response")
 local static = require("PudimWeb.middleware.static")
+local renderer = require("PudimWeb.core.renderer")
 
 local Server = {}
 
@@ -59,8 +65,8 @@ function Server.start(config)
 ╔═══════════════════════════════════════════════════════════╗
 ║                     🍮 PudimWeb                           ║
 ╠═══════════════════════════════════════════════════════════╣
-║  Servidor rodando em: http://%s:%d                  ║
-║  Arquivos estáticos:  %s                         ║
+║  Servidor rodando em: http://%s:%d                        ║
+║  Arquivos estáticos:  %s                                  ║
 ║  Pressione Ctrl+C para parar                              ║
 ╚═══════════════════════════════════════════════════════════╝
 ]], host, port, static_dir))
@@ -76,8 +82,8 @@ function Server.start(config)
                 Server.handleRequest(client, router, static_dir, static_prefix)
             end)
             
-            if not ok then
-                print("[ERROR] " .. tostring(err))
+            if not ok and _G.log then
+                _G.log.error(_G.log.section("PudimWeb.server"), "Erro ao processar requisição:", err)
             end
             
             client:close()
@@ -114,12 +120,31 @@ function Server.handleRequest(client, router, static_dir, static_prefix)
         local ok, result = pcall(handler, req, res)
         
         if not ok then
-            print("[ERROR] Handler: " .. tostring(result))
-            res.status(500).send("Internal Server Error")
+            if _G.log then
+                _G.log.error(_G.log.section("PudimWeb.server"), "Erro no handler:", req.method, req.path, result)
+            end
+            res.status(500).html(renderer.renderError(result))
         elseif type(result) == "string" then
             res.html(result)
+        elseif type(result) == "function" then
+            -- Handler retornou um componente - renderiza via renderer
+            local html = renderer.render(result, { request = req, params = params }, req.path)
+            res.html(html)
+        elseif type(result) == "table" then
+            -- Pode ser VNode ou dados JSON
+            if result.type then
+                -- É um VNode - renderiza
+                local html = renderer.render(result, { request = req }, req.path)
+                res.html(html)
+            else
+                -- É dados - envia como JSON
+                res.json(result)
+            end
         end
     else
+        if _G.log then
+            _G.log.debug(_G.log.section("PudimWeb.server"), "Rota não encontrada:", req.method, req.path)
+        end
         res.status(404).html("<h1>404 - Página não encontrada</h1>")
     end
 end

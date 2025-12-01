@@ -29,6 +29,11 @@
     @license MIT
 --]]
 
+if not _G.log then
+    local ok, loglua = pcall(require, "loglua")
+    if ok then _G.log = loglua end
+end
+
 local Router = {}
 Router.__index = Router
 

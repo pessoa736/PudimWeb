@@ -1,79 +1,56 @@
 #!/usr/bin/env lua
----@diagnostic disable
 --[[
-    PudimWeb CLI
-    ============
+    PudimWeb CLI - Create and manage PudimWeb projects
     
-    Ferramenta de linha de comando para criar e gerenciar projetos PudimWeb.
-    
-    INSTALAÇÃO:
-    -----------
-    Via LuaRocks (automaticamente instalado com pudimweb):
-        luarocks install pudimweb
-    
-    Manual:
-        chmod +x bin/pudim
-        sudo ln -s $(pwd)/bin/pudim /usr/local/bin/pudim
-    
-    COMANDOS:
-    ---------
-    pudim new <nome>    Cria um novo projeto com estrutura Next.js style
-                        - app/pages/     → Rotas automáticas
-                        - app/api/       → API Routes
-                        - app/components → Componentes
-                        - app/public/    → Arquivos estáticos
-    
-    pudim serve [porta] Inicia o servidor de desenvolvimento
-                        Porta padrão: 3000
-    
-    pudim help          Mostra esta mensagem de ajuda
-    
-    EXEMPLOS:
-    ---------
-    pudim new meu-blog
-    cd meu-blog
-    ./install.sh
-    lua server.lua
-    
-    @script pudim
-    @author pessoa736
-    @license MIT
---]]
+    Commands:
+        new <name>      Create a new project
+        serve [port]    Start development server  
+        build           Build for production
+        clean           Clean build artifacts
+        version         Show version
+        help            Show help
+]]
 
-local CLI = {}
+local VERSION = "dev-4"
 
+-- Colors (ANSI)
 local colors = {
     reset = "\27[0m",
     bold = "\27[1m",
     red = "\27[31m",
     green = "\27[32m",
     yellow = "\27[33m",
+    blue = "\27[34m",
     cyan = "\27[36m",
+    gray = "\27[90m"
 }
 
-local function colorize(text, color)
-    return (colors[color] or "") .. text .. colors.reset
+local function color(c, text)
+    return colors[c] .. text .. colors.reset
 end
 
-local function print_logo()
-    print(colorize([[
-
-    ╔═══════════════════════════════════════╗
-    ║           🍮 PudimWeb CLI             ║
-    ║     Framework Web para Lua 5.4        ║
-    ╚═══════════════════════════════════════╝
-    ]], "yellow"))
+local function log(...)
+    print(color("cyan", "[pudim]"), ...)
 end
 
-local function print_success(msg) print(colorize("  ✓ ", "green") .. msg) end
-local function print_info(msg) print(colorize("  → ", "cyan") .. msg) end
-local function print_error(msg) print(colorize("  ✗ ", "red") .. msg) end
+local function success(...)
+    print(color("green", "✓"), ...)
+end
 
+local function warn(...)
+    print(color("yellow", "⚠"), ...)
+end
+
+local function err(...)
+    print(color("red", "✗"), ...)
+end
+
+-- File utilities
 local function mkdir(path)
     os.execute('mkdir -p "' .. path .. '"')
 end
 
-local function write_file(path, content)
+local function writeFile(path, content)
     local file = io.open(path, "w")
     if file then
         file:write(content)
@@ -83,311 +60,1031 @@ local function write_file(path, content)
     return false
 end
 
--- Templates
-local function tpl_server(name)
-    return '--[[\n    ' .. name .. ' - Servidor PudimWeb (Next.js style)\n    Execute com: lua server.lua\n]]\n\n' ..
-        'package.path = table.concat({\n' ..
-        '    "./?.lua",\n' ..
-        '    "./?/init.lua",\n' ..
-        '    "./app/?.lua",\n' ..
-        '    "./app/?/init.lua",\n' ..
-        '    "./lua_modules/share/lua/5.4/?.lua",\n' ..
-        '    "./lua_modules/share/lua/5.4/?/init.lua",\n' ..
-        '}, ";") .. ";" .. package.path\n\n' ..
-        'package.cpath = table.concat({\n' ..
-        '    "./lua_modules/lib/lua/5.4/?.so",\n' ..
-        '}, ";") .. ";" .. package.cpath\n\n' ..
-        'pcall(require, "luarocks.loader")\n' ..
-        'require("DaviLuaXML")\n\n' ..
-        'local pudim = require("PudimWeb")\n\n' ..
-        '-- Expõe globais para arquivos .lx\n' ..
-        'pudim.expose()\n\n' ..
-        '-- Inicia com roteamento automático (estilo Next.js)\n' ..
-        'pudim.start({\n' ..
-        '    port = 3000,\n' ..
-        '    pagesDir = "./app/pages",\n' ..
-        '    publicDir = "./app/public",\n' ..
-        '    apiDir = "./app/api",\n' ..
-        '})\n'
+local function fileExists(path)
+    local file = io.open(path, "r")
+    if file then
+        file:close()
+        return true
+    end
+    return false
 end
 
-local function tpl_index(name)
-    return '-- app/pages/index.lx\n' ..
-        '-- Rota: /\n\n' ..
-        '-- Aliases para tags HTML (DaviLuaXML não suporta "." em tags)\n' ..
-        'local Html, Head, Body = html.html, html.head, html.body\n' ..
-        'local Meta, Title, Link = html.meta, html.title, html.link\n' ..
-        'local Div, H1, P, Nav, A = html.div, html.h1, html.p, html.nav, html.a\n\n' ..
-        'local function Home()\n' ..
-        '    return html.doctype .. <Html lang="pt-BR">\n' ..
-        '        <Head>\n' ..
-        '            <Meta charset="utf-8" />\n' ..
-        '            <Meta name="viewport" content="width=device-width, initial-scale=1" />\n' ..
-        '            <Title>' .. name .. '</Title>\n' ..
-        '            <Link rel="stylesheet" href="/css/style.css" />\n' ..
-        '        </Head>\n' ..
-        '        <Body>\n' ..
-        '            <Div class="container">\n' ..
-        '                <H1>🍮 ' .. name .. '</H1>\n' ..
-        '                <P>Seu projeto PudimWeb está rodando!</P>\n' ..
-        '                <Nav>\n' ..
-        '                    <A href="/">Home</A>\n' ..
-        '                    <A href="/about">Sobre</A>\n' ..
-        '                </Nav>\n' ..
-        '            </Div>\n' ..
-        '        </Body>\n' ..
-        '    </Html>\n' ..
-        'end\n\n' ..
-        'return Home\n'
-end
+-- ==============================================================
+-- PROJECT TEMPLATES
+-- ==============================================================
 
-local function tpl_about(name)
-    return '-- app/pages/about.lx\n' ..
-        '-- Rota: /about\n\n' ..
-        '-- Aliases para tags HTML\n' ..
-        'local Html, Head, Body = html.html, html.head, html.body\n' ..
-        'local Meta, Title, Link = html.meta, html.title, html.link\n' ..
-        'local Div, H1, P, A = html.div, html.h1, html.p, html.a\n\n' ..
-        'local function About()\n' ..
-        '    return html.doctype .. <Html lang="pt-BR">\n' ..
-        '        <Head>\n' ..
-        '            <Meta charset="utf-8" />\n' ..
-        '            <Title>Sobre - ' .. name .. '</Title>\n' ..
-        '            <Link rel="stylesheet" href="/css/style.css" />\n' ..
-        '        </Head>\n' ..
-        '        <Body>\n' ..
-        '            <Div class="container">\n' ..
-        '                <H1>Sobre</H1>\n' ..
-        '                <P>Página sobre criada automaticamente.</P>\n' ..
-        '                <A href="/">Voltar</A>\n' ..
-        '            </Div>\n' ..
-        '        </Body>\n' ..
-        '    </Html>\n' ..
-        'end\n\n' ..
-        'return About\n'
-end
+local templates = {}
 
-local function tpl_api_hello()
-    return '-- app/api/hello.lua\n' ..
-        '-- Rota: /api/hello\n\n' ..
-        'return {\n' ..
-        '    GET = function(req, res)\n' ..
-        '        res.json({\n' ..
-        '            message = "Hello from PudimWeb API!",\n' ..
-        '            timestamp = os.date(),\n' ..
-        '        })\n' ..
-        '    end,\n' ..
-        '    \n' ..
-        '    POST = function(req, res)\n' ..
-        '        res.json({\n' ..
-        '            message = "POST recebido!",\n' ..
-        '            body = req.body,\n' ..
-        '        })\n' ..
-        '    end,\n' ..
-        '}\n'
-end
+-- server.lua - Main entry point
+templates["server.lua"] = [[
+-- Server configuration for PudimWeb
+require("DaviLuaXML")
+local pudim = require("PudimWeb")
 
-local function tpl_button_component()
-    return '-- app/components/Button.lx\n' ..
-        '-- Componente reutilizável\n\n' ..
-        'local Button_ = html.button  -- Alias para DaviLuaXML\n\n' ..
-        'local Button = component(function(props, children)\n' ..
-        '    local class = props.class or "btn"\n' ..
-        '    return <Button_ class={class}>\n' ..
-        '        {children}\n' ..
-        '    </Button_>\n' ..
-        'end)\n\n' ..
-        'return Button\n'
-end
+-- Expose PudimWeb globals (component, html, etc.)
+pudim.expose()
 
-local function tpl_css(name)
-    return '/* ' .. name .. ' - Estilos */\n\n' ..
-        '* { margin: 0; padding: 0; box-sizing: border-box; }\n\n' ..
-        'body {\n' ..
-        '    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\n' ..
-        '    line-height: 1.6;\n' ..
-        '    color: #333;\n' ..
-        '    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n' ..
-        '    min-height: 100vh;\n' ..
-        '    display: flex;\n' ..
-        '    align-items: center;\n' ..
-        '    justify-content: center;\n' ..
-        '}\n\n' ..
-        '.container {\n' ..
-        '    background: white;\n' ..
-        '    padding: 3rem;\n' ..
-        '    border-radius: 1rem;\n' ..
-        '    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);\n' ..
-        '    text-align: center;\n' ..
-        '    max-width: 500px;\n' ..
-        '}\n\n' ..
-        'h1 { color: #764ba2; margin-bottom: 1rem; font-size: 2rem; }\n' ..
-        'p { color: #666; margin-bottom: 1.5rem; }\n'
-end
+-- Start the server
+pudim.start({
+    port = 3000,
+    host = "127.0.0.1",
+    pagesDir = "./app/pages",
+    publicDir = "./app/public",
+    apiDir = "./app/api",
+    componentsDir = "./app/components"
+})
+]]
 
-local function tpl_gitignore()
-    return '*.luac\nlua_modules/\n*.log\n.DS_Store\n.vscode/\n*.swp\n'
-end
+-- app/layout.lx - Global layout
+templates["app/layout.lx"] = [[
+-- Global Layout Component
+-- This wraps all pages automatically
 
-local function tpl_readme(name)
-    return '# ' .. name .. '\n\n' ..
-        'Projeto criado com [PudimWeb](https://github.com/pessoa736/PudimWeb) 🍮\n\n' ..
-        '## Estrutura (estilo Next.js)\n\n' ..
-        '```\n' ..
-        name .. '/\n' ..
-        '├── server.lua        # Ponto de entrada\n' ..
-        '├── app/\n' ..
-        '│   ├── pages/        # Rotas automáticas\n' ..
-        '│   │   ├── index.lx  # → /\n' ..
-        '│   │   └── about.lx  # → /about\n' ..
-        '│   ├── api/          # API Routes\n' ..
-        '│   │   └── hello.lua # → /api/hello\n' ..
-        '│   ├── components/   # Componentes\n' ..
-        '│   └── public/       # Arquivos estáticos\n' ..
-        '└── lua_modules/      # Dependências\n' ..
-        '```\n\n' ..
-        '## Instalação\n\n' ..
-        '```bash\n./install.sh\n```\n\n' ..
-        '## Executar\n\n' ..
-        '```bash\nlua server.lua\n```\n\n' ..
-        'Acesse: http://localhost:3000\n'
-end
+local Html, Head, Body = html.html, html.head, html.body
+local Title, Meta, Link = html.title, html.meta, html.link
+local Script = html.script
 
-local function tpl_install()
-    return '#!/bin/bash\n' ..
-        'echo "🍮 Instalando dependências..."\n' ..
-        'echo ""\n' ..
-        '# Instala PudimWeb do GitHub (ainda não está no luarocks.org)\n' ..
-        'if [ ! -d "/tmp/PudimWeb" ]; then\n' ..
-        '    git clone --depth 1 https://github.com/pessoa736/PudimWeb.git /tmp/PudimWeb\n' ..
-        'fi\n' ..
-        'cd /tmp/PudimWeb && luarocks make --tree "$OLDPWD/lua_modules" rockspecs/pudimweb-dev-2.rockspec\n' ..
-        'cd "$OLDPWD"\n' ..
-        'echo ""\n' ..
-        'echo "✓ Pronto! Execute: lua server.lua"\n'
-end
+return component(function(props, children)
+    local pageTitle = props.title or "PudimWeb App"
+    
+    return <Html lang="pt-BR">
+        <Head>
+            <Meta charset="UTF-8"/>
+            <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <Title>{pageTitle}</Title>
+            <Link rel="stylesheet" href="/styles.css"/>
+        </Head>
+        <Body>
+            {children}
+            <Script src="/app.js"/>
+        </Body>
+    </Html>
+end)
+]]
 
-function CLI.new(project_name)
-    if not project_name or project_name == "" then
-        print_error("Nome do projeto é obrigatório!")
-        print_info("Uso: pudim new <nome-do-projeto>")
-        return false
+-- app/pages/index.lx - Home page
+templates["app/pages/index.lx"] = [[
+-- Home Page
+-- Route: /
+
+local Div, H1, P, A = html.div, html.h1, html.p, html.a
+local Button, Ul, Li = html.button, html.ul, html.li
+
+-- Interactive counter component using client module
+local Counter = component(function(props)
+    local startValue = props.start or 0
+    
+    -- Client-side JavaScript generated from Lua
+    local onClick = client.function_("counterBtn", function()
+        client.let("count", client.call("parseInt", 
+            client.get("document.getElementById('count').textContent")
+        ))
+        client.set("count", client.op("count", "+", 1))
+        client.set("document.getElementById('count').textContent", "count")
+    end)
+    
+    return <Div class="counter">
+        <P>Contagem: <span id="count">{tostring(startValue)}</span></P>
+        <Button id="counterBtn" onclick="counterBtn()">Incrementar</Button>
+        {onClick}
+    </Div>
+end)
+
+-- Page component
+return component(function(props)
+    return <Div class="container">
+        <header class="hero">
+            <H1>🍮 Bem-vindo ao PudimWeb!</H1>
+            <P class="subtitle">
+                Um framework web moderno para Lua, inspirado em React e Next.js
+            </P>
+        </header>
+        
+        <section class="features">
+            <H1>✨ Features</H1>
+            <Ul>
+                <Li>📁 File-based routing (como Next.js)</Li>
+                <Li>🧩 Componentes reutilizáveis</Li>
+                <Li>🎨 Sintaxe XML com DaviLuaXML</Li>
+                <Li>⚡ Virtual DOM com tree diffing</Li>
+                <Li>🔄 Reconciler para atualizações eficientes</Li>
+                <Li>🌐 Client module para interatividade</Li>
+            </Ul>
+        </section>
+        
+        <section class="demo">
+            <H1>🎯 Exemplo Interativo</H1>
+            <Counter start={0}/>
+        </section>
+        
+        <section class="links">
+            <H1>📚 Navegação</H1>
+            <Div class="nav-links">
+                <A href="/about" class="link">Sobre</A>
+                <A href="/docs" class="link">Documentação</A>
+                <A href="/api/hello" class="link">API Demo</A>
+            </Div>
+        </section>
+    </Div>
+end)
+]]
+
+-- app/pages/about.lx - About page
+templates["app/pages/about.lx"] = [[
+-- About Page
+-- Route: /about
+
+local Div, H1, H2, P, A = html.div, html.h1, html.h2, html.p, html.a
+local Code, Pre = html.code, html.pre
+
+-- Code example as string (avoid XML parsing issues)
+local codeExample = "local Card = component(function(props, children)\n" ..
+    "    return <Div class=\"card\">\n" ..
+    "        <H2>{props.title}</H2>\n" ..
+    "        {children}\n" ..
+    "    </Div>\n" ..
+    "end)\n\n" ..
+    "-- Usando:\n" ..
+    "<Card title=\"Meu Card\">\n" ..
+    "    <P>Conteudo do card</P>\n" ..
+    "</Card>"
+
+return component(function(props)
+    return <Div class="container">
+        <H1>📖 Sobre o PudimWeb</H1>
+        
+        <section>
+            <H2>O que e?</H2>
+            <P>
+                PudimWeb e um framework web para Lua 5.4 que traz conceitos 
+                modernos de desenvolvimento web para o ecossistema Lua.
+            </P>
+        </section>
+        
+        <section>
+            <H2>Stack Tecnologica</H2>
+            <P><strong>Lua 5.4</strong> - Linguagem de programacao</P>
+            <P><strong>DaviLuaXML</strong> - Sintaxe XML em Lua</P>
+            <P><strong>LuaSocket</strong> - Servidor HTTP</P>
+            <P><strong>loglua</strong> - Sistema de logging</P>
+        </section>
+        
+        <section>
+            <H2>Exemplo de Componente</H2>
+            <Pre><Code>{codeExample}</Code></Pre>
+        </section>
+        
+        <A href="/" class="link">← Voltar para Home</A>
+    </Div>
+end)
+]]
+
+-- app/pages/docs.lx - Documentation page
+templates["app/pages/docs.lx"] = [[
+-- Documentation Page
+-- Route: /docs
+
+local Div, H1, H2, H3, P, A = html.div, html.h1, html.h2, html.h3, html.p, html.a
+local Pre, Code, Ul, Li = html.pre, html.code, html.ul, html.li
+
+-- Code examples as strings
+local componentCode = "local Button = component(function(props, children)\n" ..
+    "    local class = props.class or \"btn\"\n" ..
+    "    return <button class={class}>{children}</button>\n" ..
+    "end)"
+
+local routingCode = "app/pages/\n" ..
+    "├── index.lx      -> /\n" ..
+    "├── about.lx      -> /about\n" ..
+    "└── blog/\n" ..
+    "    ├── index.lx  -> /blog\n" ..
+    "    └── [id].lx   -> /blog/:id"
+
+local clientCode = "local onClick = client.function_(\"handleClick\", function()\n" ..
+    "    client.call(\"alert\", \"Ola!\")\n" ..
+    "end)\n" ..
+    "-- Gera: function handleClick(){alert(\"Ola!\")}"
+
+local vdomCode = "local vdom = require(\"PudimWeb.core.vdom\")\n" ..
+    "local tree = vdom.h(\"div\", {class=\"box\"}, {\n" ..
+    "    vdom.h(\"p\", {}, \"Texto\")\n" ..
+    "})"
+
+return component(function(props)
+    return <Div class="container docs">
+        <H1>📚 Documentacao</H1>
+        
+        <nav class="toc">
+            <H3>Indice</H3>
+            <Ul>
+                <Li><A href="#components">Componentes</A></Li>
+                <Li><A href="#routing">Roteamento</A></Li>
+                <Li><A href="#client">Client Module</A></Li>
+                <Li><A href="#vdom">Virtual DOM</A></Li>
+            </Ul>
+        </nav>
+        
+        <section id="components">
+            <H2>🧩 Componentes</H2>
+            <P>Componentes sao funcoes que recebem props e children:</P>
+            <Pre><Code>{componentCode}</Code></Pre>
+        </section>
+        
+        <section id="routing">
+            <H2>📁 Roteamento</H2>
+            <P>O roteamento e baseado em arquivos (File-based routing):</P>
+            <Pre><Code>{routingCode}</Code></Pre>
+        </section>
+        
+        <section id="client">
+            <H2>🌐 Client Module</H2>
+            <P>O modulo client gera JavaScript a partir de Lua:</P>
+            <Pre><Code>{clientCode}</Code></Pre>
+        </section>
+        
+        <section id="vdom">
+            <H2>⚡ Virtual DOM</H2>
+            <P>O VDom otimiza atualizacoes comparando arvores:</P>
+            <Pre><Code>{vdomCode}</Code></Pre>
+        </section>
+        
+        <A href="/" class="link">← Voltar para Home</A>
+    </Div>
+end)
+]]
+
+-- app/pages/blog/index.lx - Blog listing
+templates["app/pages/blog/index.lx"] = [[
+-- Blog Index Page
+-- Route: /blog
+
+local Div, H1, H2, P, A = html.div, html.h1, html.h2, html.p, html.a
+
+-- Mock posts (in production, load from DB or API)
+local posts = {
+    { id = "1", title = "Introducao ao PudimWeb", date = "2025-01-15" },
+    { id = "2", title = "Componentes Reutilizaveis", date = "2025-01-10" },
+    { id = "3", title = "Virtual DOM Explicado", date = "2025-01-05" }
+}
+
+local PostCard = component(function(props)
+    return <Div class="post-card">
+        <H2><A href={"/blog/" .. props.id}>{props.title}</A></H2>
+        <P class="date">{props.date}</P>
+    </Div>
+end)
+
+return component(function(props)
+    local postList = {}
+    for _, post in ipairs(posts) do
+        table.insert(postList, <PostCard 
+            id={post.id} 
+            title={post.title} 
+            date={post.date}
+        />)
     end
     
-    if project_name:match("[^%w_-]") then
-        print_error("Nome inválido. Use apenas letras, números, _ e -")
-        return false
+    return <Div class="container">
+        <H1>📝 Blog</H1>
+        <P>Ultimos artigos sobre PudimWeb</P>
+        <Div class="posts">
+            {table.concat(postList)}
+        </Div>
+        <A href="/" class="link">← Voltar para Home</A>
+    </Div>
+end)
+]]
+
+-- app/pages/blog/[id].lx - Dynamic blog post page
+templates["app/pages/blog/[id].lx"] = [[
+-- Blog Post Page (Dynamic Route)
+-- Route: /blog/:id
+
+local Div, H1, P, A = html.div, html.h1, html.p, html.a
+
+-- Mock database
+local postsDB = {
+    ["1"] = {
+        title = "Introducao ao PudimWeb",
+        content = "PudimWeb e um framework web moderno para Lua...",
+        date = "2025-01-15"
+    },
+    ["2"] = {
+        title = "Componentes Reutilizaveis",
+        content = "Aprenda a criar componentes que podem ser usados em todo o projeto...",
+        date = "2025-01-10"
+    },
+    ["3"] = {
+        title = "Virtual DOM Explicado",
+        content = "Entenda como o Virtual DOM otimiza a renderizacao...",
+        date = "2025-01-05"
+    }
+}
+
+return component(function(props)
+    local id = props.params and props.params.id or "1"
+    local post = postsDB[id]
+    
+    if not post then
+        return <Div class="container">
+            <H1>404 - Post nao encontrado</H1>
+            <A href="/blog" class="link">← Voltar para Blog</A>
+        </Div>
     end
     
-    print_logo()
-    print_info("Criando projeto: " .. colorize(project_name, "bold"))
-    print_info("Estrutura: Next.js style 🚀")
-    print("")
+    return <Div class="container">
+        <A href="/blog" class="link">← Voltar para Blog</A>
+        <article>
+            <H1>{post.title}</H1>
+            <P class="date">Publicado em: {post.date}</P>
+            <P class="content">{post.content}</P>
+        </article>
+    </Div>
+end)
+]]
+
+-- app/api/hello.lua - API endpoint
+templates["app/api/hello.lua"] = [[
+-- API Route: /api/hello
+-- Returns JSON data
+
+local json = require("PudimWeb.utils.json")
+
+return {
+    -- GET /api/hello
+    GET = function(req, res)
+        res:json({
+            message = "Ola do PudimWeb!",
+            timestamp = os.time(),
+            method = "GET"
+        })
+    end,
     
-    -- Estrutura de diretórios estilo Next.js
+    -- POST /api/hello
+    POST = function(req, res)
+        local body = req.body or {}
+        res:json({
+            message = "Dados recebidos!",
+            received = body,
+            method = "POST"
+        })
+    end
+}
+]]
+
+-- app/api/users.lua - Users API example
+templates["app/api/users.lua"] = [[
+-- API Route: /api/users
+-- RESTful users endpoint
+
+local json = require("PudimWeb.utils.json")
+
+-- Mock database
+local users = {
+    { id = 1, name = "Alice", email = "alice@email.com" },
+    { id = 2, name = "Bob", email = "bob@email.com" },
+    { id = 3, name = "Carol", email = "carol@email.com" }
+}
+
+return {
+    -- GET /api/users - List all users
+    GET = function(req, res)
+        res:json({
+            users = users,
+            count = #users
+        })
+    end,
+    
+    -- POST /api/users - Create user
+    POST = function(req, res)
+        local body = req.body or {}
+        
+        if not body.name or not body.email then
+            res:status(400):json({
+                error = "name and email are required"
+            })
+            return
+        end
+        
+        local newUser = {
+            id = #users + 1,
+            name = body.name,
+            email = body.email
+        }
+        table.insert(users, newUser)
+        
+        res:status(201):json({
+            message = "User created",
+            user = newUser
+        })
+    end
+}
+]]
+
+-- app/components/Button.lx - Reusable button component
+templates["app/components/Button.lx"] = [[
+-- Reusable Button Component
+
+local ButtonEl = html.button
+
+return component(function(props, children)
+    local class = "btn"
+    if props.variant == "primary" then
+        class = class .. " btn-primary"
+    elseif props.variant == "secondary" then
+        class = class .. " btn-secondary"
+    end
+    
+    if props.size == "large" then
+        class = class .. " btn-lg"
+    elseif props.size == "small" then
+        class = class .. " btn-sm"
+    end
+    
+    return <ButtonEl 
+        class={class} 
+        onclick={props.onclick}
+        disabled={props.disabled}
+    >
+        {children}
+    </ButtonEl>
+end)
+]]
+
+-- app/components/Card.lx - Card component
+templates["app/components/Card.lx"] = [[
+-- Card Component
+
+local Div, H2 = html.div, html.h2
+
+return component(function(props, children)
+    local class = "card"
+    if props.class then
+        class = class .. " " .. props.class
+    end
+    
+    return <Div class={class}>
+        {props.title and <H2 class="card-title">{props.title}</H2> or ""}
+        <Div class="card-body">
+            {children}
+        </Div>
+    </Div>
+end)
+]]
+
+-- app/public/styles.css - Main stylesheet
+templates["app/public/styles.css"] = [[
+/* PudimWeb Default Styles */
+
+:root {
+    --primary: #8B5CF6;
+    --primary-dark: #7C3AED;
+    --secondary: #EC4899;
+    --bg: #0F172A;
+    --bg-light: #1E293B;
+    --text: #F1F5F9;
+    --text-muted: #94A3B8;
+    --border: #334155;
+    --success: #10B981;
+    --error: #EF4444;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Hero Section */
+.hero {
+    text-align: center;
+    padding: 3rem 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+}
+
+.hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+}
+
+/* Sections */
+section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg-light);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+section h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+/* Lists */
+ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+li:last-child {
+    border-bottom: none;
+}
+
+/* Links */
+a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: var(--secondary);
+}
+
+.link {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 0.25rem;
+}
+
+.link:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    background: var(--primary);
+    color: white;
+}
+
+.btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background: var(--border);
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* Counter Demo */
+.counter {
+    text-align: center;
+    padding: 1rem;
+}
+
+.counter p {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.counter #count {
+    font-weight: bold;
+    color: var(--secondary);
+    font-size: 2rem;
+}
+
+/* Cards */
+.card {
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+
+.card-title {
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+/* Post Cards */
+.post-card {
+    padding: 1rem;
+    margin: 1rem 0;
+    background: var(--bg);
+    border-radius: 8px;
+}
+
+.post-card h2 {
+    font-size: 1.2rem;
+}
+
+.date {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Code */
+pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+code {
+    font-family: 'Fira Code', 'Monaco', monospace;
+    font-size: 0.9rem;
+    color: var(--secondary);
+}
+
+/* Documentation */
+.docs .toc {
+    background: var(--bg);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.docs .toc h3 {
+    margin-bottom: 0.5rem;
+}
+
+.docs section {
+    margin: 2rem 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+    
+    .nav-links {
+        flex-direction: column;
+    }
+}
+]]
+
+-- app/public/app.js - Client-side JavaScript
+templates["app/public/app.js"] = [[
+// PudimWeb Client-side JavaScript
+
+console.log('🍮 PudimWeb app loaded!');
+
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+            behavior: 'smooth'
+        });
+    });
+});
+
+// Add loaded class for animations
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('loaded');
+});
+]]
+
+-- .gitignore
+templates[".gitignore"] = [[
+# Dependencies
+lua_modules/
+.luarocks/
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+log.txt
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+]]
+
+-- README.md
+templates["README.md"] = [[
+# 🍮 Meu Projeto PudimWeb
+
+Projeto criado com [PudimWeb](https://github.com/yourusername/PudimWeb).
+
+## 📁 Estrutura
+
+```
+├── server.lua           # Entry point
+├── app/
+│   ├── layout.lx        # Global layout
+│   ├── pages/           # File-based routing
+│   │   ├── index.lx     # /
+│   │   ├── about.lx     # /about
+│   │   ├── docs.lx      # /docs
+│   │   └── blog/
+│   │       ├── index.lx # /blog
+│   │       └── [id].lx  # /blog/:id
+│   ├── api/             # API routes
+│   │   ├── hello.lua    # /api/hello
+│   │   └── users.lua    # /api/users
+│   ├── components/      # Reusable components
+│   └── public/          # Static files
+```
+
+## 🚀 Começando
+
+```bash
+# Iniciar servidor de desenvolvimento
+lua server.lua
+
+# Ou usando o CLI
+pudim serve
+```
+
+O servidor estará disponível em `http://localhost:3000`.
+
+## 📖 Documentação
+
+Visite `/docs` no app para ver a documentação integrada.
+
+## 🛠️ Comandos
+
+```bash
+pudim serve [port]  # Iniciar servidor
+pudim build         # Build para produção
+pudim clean         # Limpar arquivos de build
+```
+
+## 📝 Licença
+
+MIT
+]]
+
+-- ==============================================================
+-- CLI COMMANDS
+-- ==============================================================
+
+local function showHelp()
+    print([[
+🍮 ]] .. color("bold", "PudimWeb CLI") .. [[ v]] .. VERSION .. [[
+
+
+]] .. color("yellow", "USAGE:") .. [[
+    pudim <command> [options]
+
+]] .. color("yellow", "COMMANDS:") .. [[
+    ]] .. color("green", "new <name>") .. [[      Create a new PudimWeb project
+    ]] .. color("green", "serve [port]") .. [[    Start development server (default: 3000)
+    ]] .. color("green", "build") .. [[           Build project for production
+    ]] .. color("green", "clean") .. [[           Remove build artifacts
+    ]] .. color("green", "version") .. [[         Show version
+    ]] .. color("green", "help") .. [[            Show this help
+
+]] .. color("yellow", "EXAMPLES:") .. [[
+    pudim new meu-app       Create project 'meu-app'
+    pudim serve             Start server on port 3000
+    pudim serve 8080        Start server on port 8080
+    pudim build             Create production build
+
+]] .. color("yellow", "DOCS:") .. [[
+    https://github.com/yourusername/PudimWeb
+]])
+end
+
+local function showVersion()
+    print(color("cyan", "PudimWeb") .. " v" .. VERSION)
+end
+
+local function createProject(name)
+    if not name then
+        err("Project name is required")
+        print("Usage: pudim new <project-name>")
+        return
+    end
+    
+    -- Validate name
+    if name:match("[^%w%-_]") then
+        err("Project name can only contain letters, numbers, hyphens and underscores")
+        return
+    end
+    
+    -- Check if exists
+    local check = io.open(name .. "/server.lua", "r")
+    if check then
+        check:close()
+        err("Directory '" .. name .. "' already contains a project")
+        return
+    end
+    
+    print()
+    log("Creating project: " .. color("bold", name))
+    print()
+    
+    -- Create directories
     local dirs = {
-        project_name,
-        project_name .. "/app",
-        project_name .. "/app/pages",
-        project_name .. "/app/api",
-        project_name .. "/app/components",
-        project_name .. "/app/public",
-        project_name .. "/app/public/css",
-        project_name .. "/app/public/js",
-        project_name .. "/app/public/images",
+        name,
+        name .. "/app",
+        name .. "/app/pages",
+        name .. "/app/pages/blog",
+        name .. "/app/api",
+        name .. "/app/components",
+        name .. "/app/public"
     }
     
     for _, dir in ipairs(dirs) do
         mkdir(dir)
-        print_success("Criado: " .. dir .. "/")
     end
+    success("Created directories")
     
+    -- Create files
     local files = {
-        ["server.lua"] = tpl_server(project_name),
-        ["app/pages/index.lx"] = tpl_index(project_name),
-        ["app/pages/about.lx"] = tpl_about(project_name),
-        ["app/api/hello.lua"] = tpl_api_hello(),
-        ["app/components/Button.lx"] = tpl_button_component(),
-        ["app/public/css/style.css"] = tpl_css(project_name),
-        [".gitignore"] = tpl_gitignore(),
-        ["README.md"] = tpl_readme(project_name),
-        ["install.sh"] = tpl_install(),
+        { path = "server.lua", template = "server.lua" },
+        { path = "app/layout.lx", template = "app/layout.lx" },
+        { path = "app/pages/index.lx", template = "app/pages/index.lx" },
+        { path = "app/pages/about.lx", template = "app/pages/about.lx" },
+        { path = "app/pages/docs.lx", template = "app/pages/docs.lx" },
+        { path = "app/pages/blog/index.lx", template = "app/pages/blog/index.lx" },
+        { path = "app/pages/blog/[id].lx", template = "app/pages/blog/[id].lx" },
+        { path = "app/api/hello.lua", template = "app/api/hello.lua" },
+        { path = "app/api/users.lua", template = "app/api/users.lua" },
+        { path = "app/components/Button.lx", template = "app/components/Button.lx" },
+        { path = "app/components/Card.lx", template = "app/components/Card.lx" },
+        { path = "app/public/styles.css", template = "app/public/styles.css" },
+        { path = "app/public/app.js", template = "app/public/app.js" },
+        { path = ".gitignore", template = ".gitignore" },
+        { path = "README.md", template = "README.md" }
     }
     
-    for filename, content in pairs(files) do
-        local filepath = project_name .. "/" .. filename
-        if write_file(filepath, content) then
-            print_success("Criado: " .. filename)
-        else
-            print_error("Erro ao criar: " .. filename)
+    for _, file in ipairs(files) do
+        local content = templates[file.template]
+        if content then
+            writeFile(name .. "/" .. file.path, content)
+            print("  " .. color("gray", "→") .. " " .. file.path)
         end
     end
+    success("Created " .. #files .. " files")
     
-    os.execute('chmod +x "' .. project_name .. '/install.sh"')
-    
-    print("")
-    print(colorize("  ✨ Projeto criado com sucesso!", "green"))
-    print("")
-    print_info("Estrutura criada:")
-    print("    📁 app/pages/     → Rotas automáticas")
-    print("    📁 app/api/       → API Routes")  
-    print("    📁 app/components → Componentes")
-    print("    📁 app/public/    → Arquivos estáticos")
-    print("")
-    print_info("Próximos passos:")
-    print("")
-    print("    " .. colorize("cd " .. project_name, "cyan"))
-    print("    " .. colorize("./install.sh", "cyan"))
-    print("    " .. colorize("lua server.lua", "cyan"))
-    print("")
-    print_info("Acesse: " .. colorize("http://localhost:3000", "bold"))
-    print("")
-    
-    return true
+    print()
+    print(color("green", "✨ Project created successfully!"))
+    print()
+    print("Next steps:")
+    print("  " .. color("cyan", "cd " .. name))
+    print("  " .. color("cyan", "luarocks make --local") .. color("gray", "  # install dependencies"))
+    print("  " .. color("cyan", "pudim serve") .. color("gray", "             # start server"))
+    print()
 end
 
-function CLI.serve(port)
-    port = port or 9001
-    print_logo()
-    print_info("Iniciando servidor na porta " .. port .. "...")
-    os.execute("lua server.lua")
-end
-
-function CLI.help()
-    print_logo()
-    print([[
-  ]] .. colorize("COMANDOS:", "bold") .. [[
-
-    ]] .. colorize("pudim new <nome>", "cyan") .. [[      Cria um novo projeto
-    ]] .. colorize("pudim serve", "cyan") .. [[           Inicia o servidor
-    ]] .. colorize("pudim help", "cyan") .. [[            Mostra esta ajuda
-
-  ]] .. colorize("EXEMPLOS:", "bold") .. [[
-
-    pudim new meu-site
-    pudim new blog
-
-  ]] .. colorize("MAIS INFO:", "bold") .. [[
-
-    https://github.com/pessoa736/PudimWeb
-
-]])
-end
-
-local function main(args)
-    local cmd = args[1]
+local function serve(port)
+    port = port or "3000"
     
-    if not cmd or cmd == "help" or cmd == "-h" or cmd == "--help" then
-        CLI.help()
-    elseif cmd == "new" then
-        CLI.new(args[2])
-    elseif cmd == "serve" then
-        CLI.serve(args[2])
+    -- Check for server.lua
+    if not fileExists("server.lua") then
+        err("server.lua not found")
+        print("Make sure you're in a PudimWeb project directory")
+        return
+    end
+    
+    log("Starting development server on port " .. color("bold", port))
+    print()
+    
+    -- Run the server
+    os.execute("lua server.lua " .. port)
+end
+
+local function build()
+    -- Check for server.lua
+    if not fileExists("server.lua") then
+        err("server.lua not found")
+        print("Make sure you're in a PudimWeb project directory")
+        return
+    end
+    
+    log("Building project for production...")
+    
+    -- Try to load PudimWeb builder
+    local ok, pudim = pcall(require, "PudimWeb")
+    if not ok then
+        err("PudimWeb not found. Install it with: luarocks install pudimweb")
+        return
+    end
+    
+    if not pudim.builder then
+        err("Builder module not available in this version")
+        return
+    end
+    
+    -- Run build
+    local buildOk, result = pcall(pudim.builder.build, ".", "./dist")
+    
+    if buildOk and result and result.success then
+        print()
+        success("Build completed!")
+        print("  Output: " .. color("cyan", "./dist"))
+        if result.stats then
+            print("  Files: " .. result.stats.totalFiles)
+            print("  Size: " .. string.format("%.2f KB", (result.stats.totalSize or 0) / 1024))
+        end
     else
-        print_error("Comando desconhecido: " .. cmd)
-        print_info("Use 'pudim help' para ver os comandos")
+        err("Build failed: " .. tostring(result and result.error or "unknown error"))
     end
 end
 
-main(arg or {})
-return CLI
+local function clean()
+    log("Cleaning build artifacts...")
+    
+    os.execute("rm -rf ./dist")
+    os.execute("rm -rf ./build")
+    os.execute("rm -rf ./.pudim-cache")
+    
+    success("Cleaned build directories")
+end
+
+-- ==============================================================
+-- MAIN
+-- ==============================================================
+
+local command = arg[1]
+
+if not command or command == "help" or command == "-h" or command == "--help" then
+    showHelp()
+elseif command == "version" or command == "-v" or command == "--version" then
+    showVersion()
+elseif command == "new" then
+    createProject(arg[2])
+elseif command == "serve" or command == "start" or command == "dev" then
+    serve(arg[2])
+elseif command == "build" then
+    build()
+elseif command == "clean" then
+    clean()
+else
+    err("Unknown command: " .. command)
+    print("Run 'pudim help' for usage information")
+end

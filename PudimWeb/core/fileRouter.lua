@@ -23,6 +23,13 @@
         └── [id].lua      → /api/posts/:id
 --]]
 
+if not _G.log then
+    local ok, loglua = pcall(require, "loglua")
+    if ok then _G.log = loglua end
+end
+
+local renderer = require("PudimWeb.core.renderer")
+
 local FileRouter = {}
 
 --- Verifica se um caminho existe
@@ -78,6 +85,7 @@ local function fileToRoute(filename, basePath)
 end
 
 --- Cria handler para página .lx
+--- Agora usa o Renderer para integração automática com VDom, Reconciler e Client
 local function createPageHandler(filePath)
     return function(req, res)
         -- Carrega o módulo da página
@@ -85,22 +93,43 @@ local function createPageHandler(filePath)
         
         local ok, pageModule = pcall(require, pagePath)
         if not ok then
-            return res.status(500).html("<h1>500 - Erro ao carregar página</h1><pre>" .. tostring(pageModule) .. "</pre>")
+            if _G.log then
+                _G.log.error(_G.log.section("PudimWeb.fileRouter"), "Erro ao carregar página:", pagePath, pageModule)
+            end
+            return renderer.renderError("Erro ao carregar página: " .. tostring(pageModule))
         end
         
-        -- Se for função, executa
-        local content
+        -- Determina o componente a renderizar
+        local component
         if type(pageModule) == "function" then
-            content = pageModule(req)
+            component = pageModule
         elseif type(pageModule) == "table" and pageModule.default then
-            content = pageModule.default(req)
+            component = pageModule.default
         elseif type(pageModule) == "string" then
-            content = pageModule
+            -- String direta, passa ao renderer
+            return renderer.render(pageModule, { request = req }, req.path)
         else
-            content = tostring(pageModule)
+            return renderer.render(tostring(pageModule), { request = req }, req.path)
         end
         
-        return content
+        -- Usa o Renderer para renderização integrada
+        -- O renderer automaticamente:
+        -- 1. Constrói o VDom
+        -- 2. Faz reconciliação se houver versão em cache
+        -- 3. Injeta scripts do client
+        -- 4. Retorna HTML otimizado
+        local html, patches = renderer.render(component, { request = req, params = req.params }, req.path)
+        
+        -- Se houve patches e cliente suporta, poderia enviar apenas patches
+        -- Por enquanto, sempre envia HTML completo
+        -- TODO: Implementar SSE/WebSocket para enviar patches incrementais
+        
+        if _G.log and patches and #patches > 0 then
+            _G.log.debug(_G.log.section("PudimWeb.fileRouter"), 
+                string.format("Página %s: %d mudanças detectadas", req.path, #patches))
+        end
+        
+        return html
     end
 end
 
@@ -111,6 +140,9 @@ local function createApiHandler(filePath)
         
         local ok, apiModule = pcall(require, apiPath)
         if not ok then
+            if _G.log then
+                _G.log.error(_G.log.section("PudimWeb.fileRouter"), "Erro ao carregar API:", apiPath, apiModule)
+            end
             return res.status(500).json({ error = "Erro ao carregar API", details = tostring(apiModule) })
         end
         
@@ -119,10 +151,27 @@ local function createApiHandler(filePath)
         local handler = apiModule[method] or apiModule[method:lower()]
         
         if handler then
-            return handler(req, res)
+            local ok2, result = pcall(handler, req, res)
+            if not ok2 then
+                if _G.log then
+                    _G.log.error(_G.log.section("PudimWeb.fileRouter"), "Erro ao executar API:", apiPath, method, result)
+                end
+                return res.status(500).json({ error = "Erro ao executar API", details = tostring(result) })
+            end
+            return result
         elseif apiModule.default then
-            return apiModule.default(req, res)
+            local ok2, result = pcall(apiModule.default, req, res)
+            if not ok2 then
+                if _G.log then
+                    _G.log.error(_G.log.section("PudimWeb.fileRouter"), "Erro ao executar API (default):", apiPath, result)
+                end
+                return res.status(500).json({ error = "Erro ao executar API", details = tostring(result) })
+            end
+            return result
         else
+            if _G.log then
+                _G.log.debug(_G.log.section("PudimWeb.fileRouter"), "Método não permitido:", apiPath, method)
+            end
             return res.status(405).json({ error = "Método não permitido" })
         end
     end

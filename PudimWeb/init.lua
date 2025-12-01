@@ -38,10 +38,44 @@ local static = require("PudimWeb.middleware.static")
 local components = require("PudimWeb.core.components")
 local fileRouter = require("PudimWeb.core.fileRouter")
 local hooks = require("PudimWeb.core.hooks")
+local vdom = require("PudimWeb.core.vdom")
+local reconciler = require("PudimWeb.core.reconciler")
+local client = require("PudimWeb.core.client")
+local renderer = require("PudimWeb.core.renderer")
+
+-- Builder carregado sob demanda (não precisa em runtime)
+local builder = nil
 
 -- Exporta módulos
 PudimWeb.html = html
 PudimWeb.Router = Router
+PudimWeb.vdom = vdom
+PudimWeb.reconciler = reconciler
+PudimWeb.client = client
+PudimWeb.renderer = renderer
+
+-- Lazy load do builder
+function PudimWeb.getBuilder()
+    if not builder then
+        builder = require("PudimWeb.core.builder")
+    end
+    return builder
+end
+
+-- Exporta funções do VDom para fácil acesso
+PudimWeb.h = vdom.h
+PudimWeb.diff = vdom.diff
+PudimWeb.render = vdom.render
+
+-- Exporta funções do Reconciler
+PudimWeb.createRoot = reconciler.createRoot
+PudimWeb.createElement = reconciler.createElement
+PudimWeb.el = reconciler.el
+
+-- Exporta funções do Renderer
+PudimWeb.render = renderer.render
+PudimWeb.renderPage = renderer.renderPage
+PudimWeb.configureRenderer = renderer.configure
 
 -- Exporta hooks (estilo React)
 PudimWeb.useState = hooks.useState
@@ -140,6 +174,20 @@ function PudimWeb.expose()
     _G.useState = hooks.useState
     _G.useEffect = hooks.useEffect
     _G.useMemo = hooks.useMemo
+    -- VDom
+    _G.h = vdom.h
+    _G.vdom = vdom
+    -- Reconciler
+    _G.createRoot = reconciler.createRoot
+    _G.createElement = reconciler.createElement
+    _G.el = reconciler.el
+    -- Client (browser bindings) - agora integrado automaticamente
+    _G.client = client
+    _G.$ = client.select
+    _G.$$ = client.selectAll
+    -- Renderer
+    _G.render = renderer.render
+    _G.renderPage = renderer.renderPage
 end
 
 --- Helper para criar fragmentos
