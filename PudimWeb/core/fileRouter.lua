@@ -29,8 +29,45 @@ if not _G.log then
 end
 
 local renderer = require("PudimWeb.core.renderer")
+local html = require("PudimWeb.html")
+local components = require("PudimWeb.core.components")
+local hooks = require("PudimWeb.core.hooks")
+local vdom = require("PudimWeb.core.vdom")
+local reconciler = require("PudimWeb.core.reconciler")
+local client = require("PudimWeb.core.client")
 
 local FileRouter = {}
+
+-- Flags para verificar se já expôs os globais
+local globalsExposed = false
+
+--- Expõe globais necessários para arquivos .lx
+local function exposeGlobals()
+    if globalsExposed then return end
+    
+    _G.html = html
+    _G.component = function(render) return components.create(render) end
+    _G.Fragment = function(_, children) return html.fragment(children) end
+    _G.useState = hooks.useState
+    _G.useEffect = hooks.useEffect
+    _G.useMemo = hooks.useMemo
+    -- VDom
+    _G.h = vdom.h
+    _G.vdom = vdom
+    -- Reconciler
+    _G.createRoot = reconciler.createRoot
+    _G.createElement = reconciler.createElement
+    _G.el = reconciler.el
+    -- Client (browser bindings)
+    _G.client = client
+    _G["$"] = client.select
+    _G["$$"] = client.selectAll
+    -- Renderer
+    _G.render = renderer.render
+    _G.renderPage = renderer.renderPage
+    
+    globalsExposed = true
+end
 
 --- Verifica se um caminho existe
 local function pathExists(path)
@@ -88,6 +125,9 @@ end
 --- Agora usa o Renderer para integração automática com VDom, Reconciler e Client
 local function createPageHandler(filePath)
     return function(req, res)
+        -- Garante que os globais estejam expostos antes de carregar
+        exposeGlobals()
+        
         -- Carrega o módulo da página
         local pagePath = filePath:gsub("^%./", ""):gsub("%.lx$", ""):gsub("/", ".")
         

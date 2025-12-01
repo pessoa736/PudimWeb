@@ -372,6 +372,11 @@ function VDom.render(vnode, indent)
         return vnode.text or ""
     end
     
+    -- Nó raw (HTML direto)
+    if vnode.type == "#raw" then
+        return vnode.html or ""
+    end
+    
     -- Componente funcional
     if type(vnode.type) == "function" then
         local result = vnode.type(vnode.props, vnode.children)

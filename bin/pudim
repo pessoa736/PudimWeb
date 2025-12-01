@@ -11,7 +11,7 @@
         help            Show help
 ]]
 
-local VERSION = "1.0-1"
+local VERSION = "1.0-2"
 
 -- Colors (ANSI)
 local colors = {
@@ -107,18 +107,18 @@ local Script = html.script
 return component(function(props, children)
     local pageTitle = props.title or "PudimWeb App"
     
-    return <Html lang="pt-BR">
-        <Head>
-            <Meta charset="UTF-8"/>
-            <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <Title>{pageTitle}</Title>
-            <Link rel="stylesheet" href="/styles.css"/>
-        </Head>
-        <Body>
-            {children}
-            <Script src="/app.js"/>
-        </Body>
-    </Html>
+    return Html({ lang = "pt-BR" },
+        Head({},
+            Meta({ charset = "UTF-8" }) ..
+            Meta({ name = "viewport", content = "width=device-width, initial-scale=1.0" }) ..
+            Title({}, pageTitle) ..
+            Link({ rel = "stylesheet", href = "/styles.css" })
+        ) ..
+        Body({},
+            children ..
+            Script({ src = "/app.js" })
+        )
+    )
 end)
 ]]
 
@@ -129,13 +129,12 @@ templates["app/pages/index.lx"] = [[
 
 local Div, H1, P, A = html.div, html.h1, html.p, html.a
 local Button, Ul, Li = html.button, html.ul, html.li
-local Span = html.span
+local Span, Header, Section = html.span, html.header, html.section
 
--- Interactive counter component using client module
+-- Interactive counter component
 local Counter = component(function(props)
     local startValue = props.start or 0
     
-    -- Client-side JavaScript generated from Lua
     local onClick = client.function_("counterBtn", function()
         client.let("count", client.call("parseInt", 
             client.get("document.getElementById('count').textContent")
@@ -144,51 +143,50 @@ local Counter = component(function(props)
         client.set("document.getElementById('count').textContent", "count")
     end)
     
-    return <Div class="counter">
-        <P>Contagem: <Span id="count">{tostring(startValue)}</Span></P>
-        <Button id="counterBtn" onclick="counterBtn()">Incrementar</Button>
-        {onClick}
-    </Div>
+    return Div({ class = "counter" },
+        P({}, "Contagem: " .. Span({ id = "count" }, tostring(startValue))) ..
+        Button({ id = "counterBtn", onclick = "counterBtn()" }, "Incrementar") ..
+        onClick
+    )
+end)
+
+-- Feature list component
+local FeatureList = component(function()
+    return Ul({},
+        Li({}, "📁 File-based routing (como Next.js)") ..
+        Li({}, "🧩 Componentes reutilizáveis") ..
+        Li({}, "🎨 Sintaxe XML com DaviLuaXML") ..
+        Li({}, "⚡ Virtual DOM com tree diffing") ..
+        Li({}, "🔄 Reconciler para atualizações eficientes") ..
+        Li({}, "🌐 Client module para interatividade")
+    )
 end)
 
 -- Page component
-local Header, Section = html.header, html.section
-
 return component(function(props)
-    return <Div class="container">
-        <Header class="hero">
-            <H1>🍮 Bem-vindo ao PudimWeb!</H1>
-            <P class="subtitle">
-                Um framework web moderno para Lua, inspirado em React e Next.js
-            </P>
-        </Header>
-        
-        <Section class="features">
-            <H1>✨ Features</H1>
-            <Ul>
-                <Li>📁 File-based routing (como Next.js)</Li>
-                <Li>🧩 Componentes reutilizáveis</Li>
-                <Li>🎨 Sintaxe XML com DaviLuaXML</Li>
-                <Li>⚡ Virtual DOM com tree diffing</Li>
-                <Li>🔄 Reconciler para atualizações eficientes</Li>
-                <Li>🌐 Client module para interatividade</Li>
-            </Ul>
-        </Section>
-        
-        <Section class="demo">
-            <H1>🎯 Exemplo Interativo</H1>
-            <Counter start={0}/>
-        </Section>
-        
-        <Section class="links">
-            <H1>📚 Navegação</H1>
-            <Div class="nav-links">
-                <A href="/about" class="link">Sobre</A>
-                <A href="/docs" class="link">Documentação</A>
-                <A href="/api/hello" class="link">API Demo</A>
-            </Div>
-        </Section>
-    </Div>
+    local hero = Header({ class = "hero" },
+        H1({}, "🍮 Bem-vindo ao PudimWeb!") ..
+        P({ class = "subtitle" }, "Um framework web moderno para Lua, inspirado em React e Next.js")
+    )
+    
+    local features = Section({ class = "features" },
+        H1({}, "✨ Features") .. FeatureList({})
+    )
+    
+    local demo = Section({ class = "demo" },
+        H1({}, "🎯 Exemplo Interativo") .. Counter({ start = 0 })
+    )
+    
+    local links = Section({ class = "links" },
+        H1({}, "📚 Navegação") ..
+        Div({ class = "nav-links" },
+            A({ href = "/about", class = "link" }, "Sobre") ..
+            A({ href = "/docs", class = "link" }, "Documentação") ..
+            A({ href = "/api/hello", class = "link" }, "API Demo")
+        )
+    )
+    
+    return Div({ class = "container" }, hero .. features .. demo .. links)
 end)
 ]]
 
@@ -201,45 +199,38 @@ local Div, H1, H2, P, A = html.div, html.h1, html.h2, html.p, html.a
 local Code, Pre = html.code, html.pre
 local Section, Strong = html.section, html.strong
 
--- Code example as string (avoid XML parsing issues)
+-- Code example as string
 local codeExample = "local Card = component(function(props, children)\n" ..
-    "    return <Div class=\"card\">\n" ..
-    "        <H2>{props.title}</H2>\n" ..
-    "        {children}\n" ..
-    "    </Div>\n" ..
+    "    return Div({ class = 'card' },\n" ..
+    "        H2({}, props.title) .. children\n" ..
+    "    )\n" ..
     "end)\n\n" ..
     "-- Usando:\n" ..
-    "<Card title=\"Meu Card\">\n" ..
-    "    <P>Conteudo do card</P>\n" ..
-    "</Card>"
+    "Card({ title = 'Meu Card' }, P({}, 'Conteudo do card'))"
 
 return component(function(props)
-    return <Div class="container">
-        <H1>📖 Sobre o PudimWeb</H1>
-        
-        <Section>
-            <H2>O que e?</H2>
-            <P>
-                PudimWeb e um framework web para Lua 5.4 que traz conceitos 
-                modernos de desenvolvimento web para o ecossistema Lua.
-            </P>
-        </Section>
-        
-        <Section>
-            <H2>Stack Tecnologica</H2>
-            <P><Strong>Lua 5.4</Strong> - Linguagem de programacao</P>
-            <P><Strong>DaviLuaXML</Strong> - Sintaxe XML em Lua</P>
-            <P><Strong>LuaSocket</Strong> - Servidor HTTP</P>
-            <P><Strong>loglua</Strong> - Sistema de logging</P>
-        </Section>
-        
-        <Section>
-            <H2>Exemplo de Componente</H2>
-            <Pre><Code>{codeExample}</Code></Pre>
-        </Section>
-        
-        <A href="/" class="link">← Voltar para Home</A>
-    </Div>
+    local sections = 
+        Section({},
+            H2({}, "O que e?") ..
+            P({}, "PudimWeb e um framework web para Lua 5.4 que traz conceitos modernos de desenvolvimento web para o ecossistema Lua.")
+        ) ..
+        Section({},
+            H2({}, "Stack Tecnologica") ..
+            P({}, Strong({}, "Lua 5.4") .. " - Linguagem de programacao") ..
+            P({}, Strong({}, "DaviLuaXML") .. " - Sintaxe XML em Lua") ..
+            P({}, Strong({}, "LuaSocket") .. " - Servidor HTTP") ..
+            P({}, Strong({}, "loglua") .. " - Sistema de logging")
+        ) ..
+        Section({},
+            H2({}, "Exemplo de Componente") ..
+            Pre({}, Code({}, codeExample))
+        )
+    
+    return Div({ class = "container" },
+        H1({}, "Sobre o PudimWeb") ..
+        sections ..
+        A({ href = "/", class = "link" }, "Voltar para Home")
+    )
 end)
 ]]
 
@@ -252,69 +243,68 @@ local Div, H1, H2, H3, P, A = html.div, html.h1, html.h2, html.h3, html.p, html.
 local Pre, Code, Ul, Li = html.pre, html.code, html.ul, html.li
 local Nav, Section = html.nav, html.section
 
--- Code examples as strings
+-- Code examples
 local componentCode = "local Button = component(function(props, children)\n" ..
-    "    local class = props.class or \"btn\"\n" ..
-    "    return <button class={class}>{children}</button>\n" ..
+    "    local class = props.class or 'btn'\n" ..
+    "    return html.button({ class = class }, children)\n" ..
     "end)"
 
 local routingCode = "app/pages/\n" ..
-    "├── index.lx      -> /\n" ..
-    "├── about.lx      -> /about\n" ..
-    "└── blog/\n" ..
-    "    ├── index.lx  -> /blog\n" ..
-    "    └── [id].lx   -> /blog/:id"
+    "  index.lx      -> /\n" ..
+    "  about.lx      -> /about\n" ..
+    "  blog/\n" ..
+    "    index.lx  -> /blog\n" ..
+    "    [id].lx   -> /blog/:id"
 
-local clientCode = "local onClick = client.function_(\"handleClick\", function()\n" ..
-    "    client.call(\"alert\", \"Ola!\")\n" ..
+local clientCode = "local onClick = client.function_('handleClick', function()\n" ..
+    "    client.call('alert', 'Ola!')\n" ..
     "end)\n" ..
-    "-- Gera: function handleClick(){alert(\"Ola!\")}"
+    "-- Gera: function handleClick(){alert('Ola!')}"
 
-local vdomCode = "local vdom = require(\"PudimWeb.core.vdom\")\n" ..
-    "local tree = vdom.h(\"div\", {class=\"box\"}, {\n" ..
-    "    vdom.h(\"p\", {}, \"Texto\")\n" ..
+local vdomCode = "local vdom = require('PudimWeb.core.vdom')\n" ..
+    "local tree = vdom.h('div', {class='box'}, {\n" ..
+    "    vdom.h('p', {}, 'Texto')\n" ..
     "})"
 
 return component(function(props)
-    return <Div class="container docs">
-        <H1>📚 Documentacao</H1>
-        
-        <Nav class="toc">
-            <H3>Indice</H3>
-            <Ul>
-                <Li><A href="#components">Componentes</A></Li>
-                <Li><A href="#routing">Roteamento</A></Li>
-                <Li><A href="#client">Client Module</A></Li>
-                <Li><A href="#vdom">Virtual DOM</A></Li>
-            </Ul>
-        </Nav>
-        
-        <Section id="components">
-            <H2>🧩 Componentes</H2>
-            <P>Componentes sao funcoes que recebem props e children:</P>
-            <Pre><Code>{componentCode}</Code></Pre>
-        </Section>
-        
-        <Section id="routing">
-            <H2>📁 Roteamento</H2>
-            <P>O roteamento e baseado em arquivos (File-based routing):</P>
-            <Pre><Code>{routingCode}</Code></Pre>
-        </Section>
-        
-        <Section id="client">
-            <H2>🌐 Client Module</H2>
-            <P>O modulo client gera JavaScript a partir de Lua:</P>
-            <Pre><Code>{clientCode}</Code></Pre>
-        </Section>
-        
-        <Section id="vdom">
-            <H2>⚡ Virtual DOM</H2>
-            <P>O VDom otimiza atualizacoes comparando arvores:</P>
-            <Pre><Code>{vdomCode}</Code></Pre>
-        </Section>
-        
-        <A href="/" class="link">← Voltar para Home</A>
-    </Div>
+    local toc = Nav({ class = "toc" },
+        H3({}, "Indice") ..
+        Ul({},
+            Li({}, A({ href = "#components" }, "Componentes")) ..
+            Li({}, A({ href = "#routing" }, "Roteamento")) ..
+            Li({}, A({ href = "#client" }, "Client Module")) ..
+            Li({}, A({ href = "#vdom" }, "Virtual DOM"))
+        )
+    )
+    
+    local sections = 
+        Section({ id = "components" },
+            H2({}, "Componentes") ..
+            P({}, "Componentes sao funcoes que recebem props e children:") ..
+            Pre({}, Code({}, componentCode))
+        ) ..
+        Section({ id = "routing" },
+            H2({}, "Roteamento") ..
+            P({}, "O roteamento e baseado em arquivos (File-based routing):") ..
+            Pre({}, Code({}, routingCode))
+        ) ..
+        Section({ id = "client" },
+            H2({}, "Client Module") ..
+            P({}, "O modulo client gera JavaScript a partir de Lua:") ..
+            Pre({}, Code({}, clientCode))
+        ) ..
+        Section({ id = "vdom" },
+            H2({}, "Virtual DOM") ..
+            P({}, "O VDom otimiza atualizacoes comparando arvores:") ..
+            Pre({}, Code({}, vdomCode))
+        )
+    
+    return Div({ class = "container docs" },
+        H1({}, "Documentacao") ..
+        toc ..
+        sections ..
+        A({ href = "/", class = "link" }, "Voltar para Home")
+    )
 end)
 ]]
 
@@ -333,30 +323,24 @@ local posts = {
 }
 
 local PostCard = component(function(props)
-    return <Div class="post-card">
-        <H2><A href={"/blog/" .. props.id}>{props.title}</A></H2>
-        <P class="date">{props.date}</P>
-    </Div>
+    return Div({ class = "post-card" },
+        H2({}, A({ href = "/blog/" .. props.id }, props.title)) ..
+        P({ class = "date" }, props.date)
+    )
 end)
 
 return component(function(props)
     local postList = {}
     for _, post in ipairs(posts) do
-        table.insert(postList, <PostCard 
-            id={post.id} 
-            title={post.title} 
-            date={post.date}
-        />)
+        table.insert(postList, PostCard({ id = post.id, title = post.title, date = post.date }))
     end
     
-    return <Div class="container">
-        <H1>📝 Blog</H1>
-        <P>Ultimos artigos sobre PudimWeb</P>
-        <Div class="posts">
-            {table.concat(postList)}
-        </Div>
-        <A href="/" class="link">← Voltar para Home</A>
-    </Div>
+    return Div({ class = "container" },
+        H1({}, "📝 Blog") ..
+        P({}, "Ultimos artigos sobre PudimWeb") ..
+        Div({ class = "posts" }, table.concat(postList)) ..
+        A({ href = "/", class = "link" }, "← Voltar para Home")
+    )
 end)
 ]]
 
@@ -392,20 +376,20 @@ return component(function(props)
     local post = postsDB[id]
     
     if not post then
-        return <Div class="container">
-            <H1>404 - Post nao encontrado</H1>
-            <A href="/blog" class="link">← Voltar para Blog</A>
-        </Div>
+        return Div({ class = "container" },
+            H1({}, "404 - Post nao encontrado") ..
+            A({ href = "/blog", class = "link" }, "← Voltar para Blog")
+        )
     end
     
-    return <Div class="container">
-        <A href="/blog" class="link">← Voltar para Blog</A>
-        <Article>
-            <H1>{post.title}</H1>
-            <P class="date">Publicado em: {post.date}</P>
-            <P class="content">{post.content}</P>
-        </Article>
-    </Div>
+    return Div({ class = "container" },
+        A({ href = "/blog", class = "link" }, "← Voltar para Blog") ..
+        Article({},
+            H1({}, post.title) ..
+            P({ class = "date" }, "Publicado em: " .. post.date) ..
+            P({ class = "content" }, post.content)
+        )
+    )
 end)
 ]]
 
@@ -507,13 +491,11 @@ return component(function(props, children)
         class = class .. " btn-sm"
     end
     
-    return <ButtonEl 
-        class={class} 
-        onclick={props.onclick}
-        disabled={props.disabled}
-    >
-        {children}
-    </ButtonEl>
+    return ButtonEl({
+        class = class,
+        onclick = props.onclick,
+        disabled = props.disabled
+    }, children)
 end)
 ]]
 
@@ -529,12 +511,15 @@ return component(function(props, children)
         class = class .. " " .. props.class
     end
     
-    return <Div class={class}>
-        {props.title and <H2 class="card-title">{props.title}</H2> or ""}
-        <Div class="card-body">
-            {children}
-        </Div>
-    </Div>
+    local title = ""
+    if props.title then
+        title = H2({ class = "card-title" }, props.title)
+    end
+    
+    return Div({ class = class },
+        title ..
+        Div({ class = "card-body" }, children)
+    )
 end)
 ]]
 

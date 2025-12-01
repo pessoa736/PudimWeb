@@ -661,6 +661,78 @@ function Client.onLoad(callback)
 end
 
 --[[
+    Geração de código JavaScript programática (para templates)
+--]]
+
+--- Cria uma função JavaScript global
+--- @param name string Nome da função
+--- @param body function Callback que gera o corpo
+--- @return string Script tag com a função
+function Client.function_(name, body)
+    local savedBuffer = jsBuffer
+    jsBuffer = {}
+    
+    -- Executa o body para capturar os comandos JavaScript
+    if type(body) == "function" then
+        body()
+    end
+    
+    local bodyJS = table.concat(jsBuffer, "\n  ")
+    jsBuffer = savedBuffer
+    
+    -- Retorna a função JavaScript como string para inline
+    local js = "function " .. name .. "() {\n  " .. bodyJS .. "\n}"
+    return '<script>\n' .. js .. '\n</script>'
+end
+
+--- Declara uma variável JavaScript
+--- @param name string Nome da variável
+--- @param value any Valor inicial (opcional)
+function Client.let(name, value)
+    if value then
+        addJS("let " .. name .. " = " .. tostring(value) .. ";")
+    else
+        addJS("let " .. name .. ";")
+    end
+end
+
+--- Define o valor de uma variável/propriedade
+--- @param target string Nome da variável ou propriedade
+--- @param value any Valor a atribuir
+function Client.set(target, value)
+    addJS(target .. " = " .. tostring(value) .. ";")
+end
+
+--- Obtém o valor de uma expressão JavaScript (retorna a expressão como string)
+--- @param expr string Expressão JavaScript
+--- @return string
+function Client.get(expr)
+    return expr
+end
+
+--- Cria uma operação binária
+--- @param left any Operando esquerdo
+--- @param op string Operador
+--- @param right any Operando direito
+--- @return string
+function Client.op(left, op, right)
+    return "(" .. tostring(left) .. " " .. op .. " " .. tostring(right) .. ")"
+end
+
+--- Chama uma função JavaScript
+--- @param funcName string Nome da função
+--- @param ... any Argumentos
+--- @return string
+function Client.call(funcName, ...)
+    local args = {...}
+    local argsStr = {}
+    for _, arg in ipairs(args) do
+        table.insert(argsStr, tostring(arg))
+    end
+    return funcName .. "(" .. table.concat(argsStr, ", ") .. ")"
+end
+
+--[[
     Build
 --]]
 

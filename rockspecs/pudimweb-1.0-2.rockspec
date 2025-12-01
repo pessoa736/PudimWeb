@@ -1,8 +1,8 @@
 package = "PudimWeb"
-version = "1.0-1"
+version = "1.0-2"
 source = {
    url = "git://github.com/pessoa736/PudimWeb.git",
-   tag = "v1.0-1"
+   tag = "v1.0-2"
 }
 description = {
    summary = "Web framework for Lua 5.4 inspired by React/Next.js",
@@ -29,9 +29,9 @@ description = {
 }
 dependencies = {
    "lua >= 5.4",
-   "daviluaxml >= 1.2",
-   "loglua >= 1.5",
-   "luasocket >= 3.1.0"
+   "daviluaxml",
+   "loglua",
+   "luasocket"
 }
 build = {
    type = "builtin",
