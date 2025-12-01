@@ -1,0 +1,19 @@
+# Dependencies
+lua_modules/
+.luarocks/
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+log.txt
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

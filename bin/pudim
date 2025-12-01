@@ -11,7 +11,7 @@
         help            Show help
 ]]
 
-local VERSION = "dev-5"
+local VERSION = "1.0-1"
 
 -- Colors (ANSI)
 local colors = {

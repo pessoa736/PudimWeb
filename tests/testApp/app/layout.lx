@@ -1,0 +1,23 @@
+-- Global Layout Component
+-- This wraps all pages automatically
+
+local Html, Head, Body = html.html, html.head, html.body
+local Title, Meta, Link = html.title, html.meta, html.link
+local Script = html.script
+
+return component(function(props, children)
+    local pageTitle = props.title or "PudimWeb App"
+    
+    return <Html lang="pt-BR">
+        <Head>
+            <Meta charset="UTF-8"/>
+            <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <Title>{pageTitle}</Title>
+            <Link rel="stylesheet" href="/styles.css"/>
+        </Head>
+        <Body>
+            {children}
+            <Script src="/app.js"/>
+        </Body>
+    </Html>
+end)
