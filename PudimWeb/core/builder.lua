@@ -85,26 +85,26 @@ end
 
 local function log_info(msg)
     if buildState.verbose then
-        print(colorize("  → ", "cyan") .. msg)
+        log(colorize("  → ", "cyan") .. msg)
     end
 end
 
 local function log_success(msg)
     if buildState.verbose then
-        print(colorize("  ✓ ", "green") .. msg)
+        log(colorize("  ✓ ", "green") .. msg)
     end
 end
 
 local function log_warning(msg)
     table.insert(buildState.warnings, msg)
     if buildState.verbose then
-        print(colorize("  ⚠ ", "yellow") .. msg)
+        log(colorize("  ⚠ ", "yellow") .. msg)
     end
 end
 
 local function log_error(msg)
     table.insert(buildState.errors, msg)
-    print(colorize("  ✗ ", "red") .. msg)
+    log(colorize("  ✗ ", "red") .. msg)
 end
 
 --[[
