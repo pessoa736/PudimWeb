@@ -31,7 +31,9 @@ dependencies = {
    "lua >= 5.4",
    "daviluaxml",
    "loglua",
-   "luasocket"
+   "luasocket",
+   "pudimserver",
+   "lua-cjson"
 }
 build = {
    type = "builtin",
@@ -46,12 +48,6 @@ build = {
       ["PudimWeb.core.renderer"] = "PudimWeb/core/renderer.lua",
       ["PudimWeb.core.vdom"] = "PudimWeb/core/vdom.lua",
       ["PudimWeb.html"] = "PudimWeb/html/init.lua",
-      ["PudimWeb.http.request"] = "PudimWeb/http/request.lua",
-      ["PudimWeb.http.response"] = "PudimWeb/http/response.lua",
-      ["PudimWeb.http.server"] = "PudimWeb/http/server.lua",
-      ["PudimWeb.middleware.static"] = "PudimWeb/middleware/static.lua",
-      ["PudimWeb.router"] = "PudimWeb/router.lua",
-      ["PudimWeb.utils.json"] = "PudimWeb/utils/json.lua"
    },
    install = {
       bin = {
