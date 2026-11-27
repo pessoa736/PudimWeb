@@ -1,4 +1,4 @@
-# 🍮 PudimWeb
+# PudimWeb
 
 > **Status: being rewritten from scratch.** The code currently in this repository is the old version (December 2025) and will be replaced. The new version is still in the planning stage: nothing below the "Planned direction" section is final.
 
@@ -32,4 +32,4 @@ MIT. See [LICENSE](LICENSE).
 
 ---
 
-Made with 🍮 by [pessoa736](https://github.com/pessoa736)
+Made by [pessoa736](https://github.com/pessoa736)
