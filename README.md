@@ -1,6 +1,8 @@
 # PudimWeb
 
 > **Status: being rewritten from scratch.** The code currently in this repository is the old version (December 2025) and will be replaced. The new version is still in the planning stage: nothing below the "Planned direction" section is final.
+>
+> **Note:** I'm now building another web framework, [Action-Chainsaw](https://github.com/pessoa736/Action-Chainsaw), on DSLX with [Pegasus](https://github.com/EvandroLG/pegasus.lua) as its web server. Because of it, the plan below may change.
 
 A web framework for **Lua 5.4**, inspired by **React / Next.js**: pages and components written in Lua with JSX-like markup, routed by the file system.
 
