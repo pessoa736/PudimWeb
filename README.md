@@ -1,246 +1,35 @@
 # 🍮 PudimWeb
 
-Framework web para **Lua 5.4** inspirado em **React/Next.js**.
+> **Status: being rewritten from scratch.** The code currently in this repository is the old version (December 2025) and will be replaced. The new version is still in the planning stage: nothing below the "Planned direction" section is final.
 
-[![Lua](https://img.shields.io/badge/Lua-5.4-blue.svg)](https://www.lua.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+A web framework for **Lua 5.4**, inspired by **React / Next.js**: pages and components written in Lua with JSX-like markup, routed by the file system.
 
-## ✨ Características
+## Planned direction (rewrite)
 
-- 📁 **File-based routing** - Rotas automáticas baseadas em arquivos (estilo Next.js)
-- 🧩 **Componentes** - Componentes funcionais com props e children (estilo React)
-- 🪝 **Hooks** - useState, useEffect, useMemo, useContext
-- 🔌 **API Routes** - Endpoints HTTP em arquivos separados
-- 📄 **Arquivos .lx** - Sintaxe JSX-like via DaviLuaXML
-- 🎨 **Arquivos estáticos** - Servir CSS, JS, imagens automaticamente
-- 🛠️ **CLI** - Ferramenta para criar e gerenciar projetos
+- **Markup with [DSLX](https://github.com/pessoa736/DLuaXML).** DSLX is my JSX-like layer for Lua (the successor of DaviLuaXML, rewritten on LPeg). The rewrite will be built on it and on `.dslx` files, instead of the old `.lx` files.
+- **Hosting handled by Docker (probably).** Instead of the framework doing all the server work itself, the idea is to leave the hosting side to a Docker setup. This is still being planned.
+- Everything else (API, project layout, CLI, how rendering works) will be redesigned, so the old documentation is not kept here.
 
-## 📦 Instalação
+## The old version
 
-### Via LuaRocks
+What is in `main` today is the first implementation, kept until the rewrite replaces it:
 
-```bash
-luarocks install pudimweb
-```
+- file-based routing (`app/pages`, dynamic routes like `[id].lx`) and API routes (`app/api`)
+- functional components and React-style hooks (`useState`, `useEffect`, `useMemo`, `useContext`)
+- a virtual DOM, reconciler, server renderer and client bundle builder
+- static files, an HTTP server on LuaSocket, and a `pudim` CLI that scaffolds projects
+- `.lx` files through DaviLuaXML 1.x
 
-### Manual
+It was published on LuaRocks as [`pudimweb`](https://luarocks.org/modules/pessoa736/pudimweb) (last release `1.0-3`). It is no longer maintained: install it only if you want to look at the old approach.
 
 ```bash
-git clone https://github.com/pessoa736/PudimWeb.git
-cd PudimWeb
-luarocks make rockspecs/pudimweb-dev-2.rockspec
+luarocks install pudimweb 1.0-3
 ```
 
-## 🚀 Início Rápido
+## License
 
-### Criar um novo projeto
-
-```bash
-pudim new meu-projeto
-cd meu-projeto
-./install.sh
-lua server.lua
-```
-
-Acesse: http://localhost:3000
-
-## 📁 Estrutura do Projeto
-
-```
-meu-projeto/
-├── server.lua           # Ponto de entrada
-├── app/
-│   ├── pages/           # Rotas automáticas
-│   │   ├── index.lx     # → /
-│   │   ├── about.lx     # → /about
-│   │   └── blog/
-│   │       ├── index.lx # → /blog
-│   │       └── [id].lx  # → /blog/:id (rota dinâmica)
-│   ├── api/             # API Routes
-│   │   └── hello.lua    # → /api/hello
-│   ├── components/      # Componentes reutilizáveis
-│   │   └── Button.lx
-│   └── public/          # Arquivos estáticos
-│       ├── css/
-│       ├── js/
-│       └── images/
-└── lua_modules/         # Dependências
-```
-
-## 📝 Exemplos
-
-### Página Básica (app/pages/index.lx)
-
-```lua
--- Aliases para tags HTML
-local Html, Head, Body = html.html, html.head, html.body
-local Div, H1, P = html.div, html.h1, html.p
-
-local function Home()
-    return html.doctype .. <Html lang="pt-BR">
-        <Head>
-            <html.title>Meu Site</html.title>
-        </Head>
-        <Body>
-            <Div class="container">
-                <H1>Olá, PudimWeb!</H1>
-                <P>Bem-vindo ao meu site.</P>
-            </Div>
-        </Body>
-    </Html>
-end
-
-return Home
-```
-
-### Componente Reutilizável (app/components/Card.lx)
-
-```lua
-local Div, H2, P = html.div, html.h2, html.p
-
-local Card = component(function(props, children)
-    return <Div class="card">
-        <H2>{props.title}</H2>
-        <P>{children}</P>
-    </Div>
-end)
-
-return Card
-```
-
-### API Route (app/api/users.lua)
-
-```lua
-return {
-    GET = function(req, res)
-        res.json({
-            users = {"Alice", "Bob", "Carol"}
-        })
-    end,
-    
-    POST = function(req, res)
-        local name = req.body.name
-        res.json({
-            message = "Usuário criado: " .. name
-        })
-    end,
-}
-```
-
-### Rota Dinâmica (app/pages/blog/[id].lx)
-
-```lua
-local Div, H1, P = html.div, html.h1, html.p
-
-local function BlogPost(req)
-    local id = req.params.id
-    
-    return html.doctype .. <Div>
-        <H1>Post #{id}</H1>
-        <P>Conteúdo do post...</P>
-    </Div>
-end
-
-return BlogPost
-```
-
-## 🪝 Hooks
-
-### useState
-
-```lua
-local count, setCount = useState(0)
-setCount(count + 1)
-```
-
-### useEffect
-
-```lua
-useEffect(function()
-    print("Componente montado!")
-    return function()
-        print("Componente desmontado!")
-    end
-end, {})
-```
-
-### useMemo
-
-```lua
-local doubled = useMemo(function()
-    return value * 2
-end, {value})
-```
-
-### useContext
-
-```lua
-local ThemeContext = createContext("light")
-
--- No componente pai
-<ThemeContext.Provider value="dark">
-    {children}
-</ThemeContext.Provider>
-
--- No componente filho
-local theme = useContext(ThemeContext)
-```
-
-## ⚙️ Configuração do Servidor
-
-```lua
--- server.lua
-require("DaviLuaXML")
-local pudim = require("PudimWeb")
-
-pudim.expose()  -- Expõe globais (html, component, hooks)
-
-pudim.start({
-    port = 3000,              -- Porta do servidor
-    host = "127.0.0.1",       -- Host
-    pagesDir = "./app/pages", -- Diretório de páginas
-    publicDir = "./app/public", -- Arquivos estáticos
-    apiDir = "./app/api",     -- API Routes
-})
-```
-
-## 🛠️ CLI
-
-```bash
-# Criar novo projeto
-pudim new <nome-do-projeto>
-
-# Iniciar servidor
-pudim serve [porta]
-
-# Ajuda
-pudim help
-```
-
-## 📚 Dependências
-
-- [Lua 5.4](https://www.lua.org/)
-- [LuaSocket](https://github.com/lunarmodules/luasocket)
-- [DaviLuaXML](https://github.com/pessoa736/DaviLuaXML)
-- [loglua](https://github.com/pessoa736/loglua)
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie sua branch (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 🙏 Agradecimentos
-
-- Inspirado por [React](https://react.dev/) e [Next.js](https://nextjs.org/)
-- Comunidade Lua
+MIT. See [LICENSE](LICENSE).
 
 ---
 
-Feito com 🍮 por [pessoa736](https://github.com/pessoa736)
+Made with 🍮 by [pessoa736](https://github.com/pessoa736)
